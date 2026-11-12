@@ -7,14 +7,15 @@ I giocatori **non hanno bisogno di nessun account**: si apre il link e si gioca.
 
 ```
 server.js            server Node.js: pagina del gioco + partite in tempo reale (WebSocket)
-public/index.html    il gioco (arena 3D, interfaccia, collegamento al server)
+public/sim.js        motore della battaglia (carte, truppe, torri) — gira sul server e, per l'allenamento, nel browser
+public/index.html    il gioco (arena 3D, carte, omini, effetti, collegamento al server)
 public/vendor/       three.js (grafica 3D)
 render.yaml          configurazione pronta per Render.com
 ```
 
-Il server è l'arbitro della partita: decide quando inizia, tiene l'orologio e calcola l'elisir di
-entrambi i giocatori (10 aggiornamenti al secondo). Le regole (elisir, tempi, vita delle torri)
-sono in cima a `server.js`, nell'oggetto `CFG`.
+Il server è l'arbitro della partita: fa girare la battaglia 20 volte al secondo (movimento, attacchi,
+torri, elisir) e manda lo stato ai due giocatori 10 volte al secondo. I client mandano solo
+"gioco questa carta qui". Regole e carte sono in `public/sim.js` (oggetti `CFG` e `CARDS`).
 
 ## Provarlo sul tuo computer
 

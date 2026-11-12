@@ -3,60 +3,58 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Arena Piazza Leonardo</title>
+<title>Bazoo Game — Arena Piazza Leonardo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
-<script src="vendor/three.min.js"></script>
 <style>
-  :root{
-    --blu:#2f7fe0; --blu-d:#1b4f99; --rosso:#e0413a; --rosso-d:#94221d;
-    --elisir:#d43bd6; --elisir-2:#ff7af5; --oro:#ffd23f;
-    --ui-bg:#2b2238; --ui-bg2:#3b2f4d;
-  }
+  :root{ --blu:#2f7fe0; --rosso:#e0413a; --elisir:#d43bd6; --elisir-2:#ff7af5; --oro:#ffd23f; }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%;background:#120e18;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;color:#fff;user-select:none;-webkit-user-select:none}
+  html,body{height:100%;background:#120e18;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none}
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
   #game{position:relative;height:100%;width:min(100vw, calc(100vh * 0.5625));overflow:hidden;background:#3c5a2c;box-shadow:0 0 60px rgba(0,0,0,.6)}
   @media (max-aspect-ratio: 10/16){ #game{width:100vw} }
-  canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block}
+  canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
   .font-g{font-family:'Lilita One','Nunito',sans-serif;letter-spacing:.5px}
   .stroke{text-shadow:0 2px 0 #000,0 -1px 0 #000,1px 0 0 #000,-1px 0 0 #000,0 3px 6px rgba(0,0,0,.4)}
 
-  /* ---------- HUD in alto ---------- */
+  /* HUD in alto */
   #hudTop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:8px 8px 0;pointer-events:none;z-index:5}
   .nameplate{background:linear-gradient(180deg,rgba(20,14,30,.85),rgba(20,14,30,.65));border-radius:10px;padding:5px 10px;min-width:110px;border:2px solid rgba(255,255,255,.12)}
-  .nameplate .n{font-size:15px;line-height:1.1}
+  .nameplate .n{font-size:15px;line-height:1.1;color:#ffb3ae}
   .nameplate .s{font-size:10.5px;opacity:.75;font-weight:800}
-  .nameplate.red .n{color:#ffb3ae}
   #timerBox{background:linear-gradient(180deg,rgba(20,14,30,.88),rgba(20,14,30,.7));border-radius:10px;padding:4px 10px 5px;text-align:center;border:2px solid rgba(255,255,255,.12);min-width:92px}
   #timerBox .l{font-size:10.5px;font-weight:800;opacity:.8}
   #timer{font-size:24px;line-height:1}
   #timer.urg{color:#ff6b5e}
   #multBadge{display:none;margin-top:3px;font-size:13px;background:var(--elisir);border-radius:6px;padding:1px 6px;color:#fff}
-
-  /* corone */
   #crowns{position:absolute;right:6px;top:27%;display:flex;flex-direction:column;gap:40px;z-index:5;pointer-events:none}
   .crown{display:flex;align-items:center;gap:4px;background:rgba(20,14,30,.7);border-radius:20px;padding:3px 8px 3px 4px;border:2px solid rgba(255,255,255,.12)}
   .crown svg{width:22px;height:18px}
   .crown span{font-size:18px}
 
-  /* etichette torri */
-  #labels{position:absolute;inset:0;pointer-events:none;z-index:4}
+  /* etichette (torri, truppe, bolle) */
+  #labels{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:hidden}
   .tl{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:1px}
   .tl .hpn{font-size:11px;font-weight:900}
-  .tl .bar{width:52px;height:8px;border-radius:4px;background:rgba(0,0,0,.65);border:1.5px solid rgba(0,0,0,.8);overflow:hidden}
+  .tl .bar{width:50px;height:8px;border-radius:4px;background:rgba(0,0,0,.65);border:1.5px solid rgba(0,0,0,.8);overflow:hidden}
   .tl .bar i{display:block;height:100%;width:100%}
-  .tl.king .bar{width:70px;height:9px}
+  .tl.king .bar{width:66px;height:9px}
   .tl.king .who{font-size:12px;font-weight:900;padding:0 6px;border-radius:5px;background:rgba(0,0,0,.45);max-width:110px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-  .tl.me .bar i{background:linear-gradient(180deg,#7dc3ff,#2f7fe0)}
-  .tl.op .bar i{background:linear-gradient(180deg,#ff9a92,#e0413a)}
-
-  /* bolle emote */
+  .tl.me .bar i, .ub.me .hp{background:linear-gradient(180deg,#7dc3ff,#2f7fe0)}
+  .tl.op .bar i, .ub.op .hp{background:linear-gradient(180deg,#ff9a92,#e0413a)}
+  .tl.dead{display:none}
+  .ub{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;gap:1px;align-items:center}
+  .ub .b{height:5px;border-radius:3px;background:rgba(0,0,0,.7);border:1px solid rgba(0,0,0,.85);overflow:hidden}
+  .ub .hp,.ub .shd{display:block;height:100%;width:100%}
+  .ub .shd{background:linear-gradient(180deg,#f2f2f2,#a9b4c2)}
+  .ub.deploy{opacity:.55}
+  .plbl{position:absolute;transform:translate(-50%,-100%);font-size:12px;font-weight:900;padding:2px 7px;border-radius:7px;white-space:nowrap;transition:opacity .4s}
+  .plbl.me{background:rgba(47,127,224,.9)} .plbl.op{background:rgba(224,65,58,.9)}
   .bubble{position:absolute;transform:translate(-50%,-100%) scale(.2);background:#fff;color:#222;font-weight:900;font-size:15px;padding:7px 12px;border-radius:14px;white-space:nowrap;box-shadow:0 4px 0 rgba(0,0,0,.25);z-index:6;pointer-events:none;opacity:0;transition:transform .18s cubic-bezier(.3,1.6,.6,1),opacity .15s}
   .bubble.show{transform:translate(-50%,-100%) scale(1);opacity:1}
   .bubble:after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-8px;border:8px solid transparent;border-top-color:#fff;border-bottom:0}
 
-  /* ---------- vassoio carte + elisir ---------- */
+  /* vassoio carte + elisir */
   #tray{position:absolute;left:0;right:0;bottom:0;height:24%;min-height:150px;z-index:7;
     background:linear-gradient(180deg,#4a3a5e 0%,#2f2540 18%,#241c31 100%);
     border-top:3px solid #6b5687;box-shadow:0 -6px 18px rgba(0,0,0,.45);
@@ -64,13 +62,30 @@
   #cardsRow{flex:1;display:flex;gap:6px;align-items:stretch;min-height:0}
   #nextCol{width:15%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px}
   #nextCol .lbl{font-size:10px;font-weight:900;opacity:.85;text-transform:uppercase}
-  .slot{position:relative;border-radius:9px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));border:2.5px dashed rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;overflow:hidden}
-  .slot .q{font-size:26px;opacity:.25}
-  #nextSlot{width:100%;aspect-ratio:3/4;max-height:70%}
-  #nextSlot .q{font-size:16px}
-  #hand{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-  #hand .slot{height:100%}
-  #hand .slot .cost{position:absolute;left:3px;top:3px;width:20px;height:22px;border-radius:50% 50% 50% 50%/40% 40% 60% 60%;background:radial-gradient(circle at 40% 35%,var(--elisir-2),var(--elisir));font-size:12px;display:none;align-items:center;justify-content:center}
+  #nextSlot{width:100%;aspect-ratio:3/4;max-height:72%;position:relative}
+  #hand{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;min-height:0}
+  .slotEmpty{border-radius:9px;border:2.5px dashed rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;height:100%;font-size:24px;opacity:.6}
+
+  /* carta */
+  .card{position:relative;height:100%;border-radius:9px;padding:3px;cursor:pointer;transition:transform .14s cubic-bezier(.3,1.5,.6,1), box-shadow .2s;
+    background:linear-gradient(180deg,#8fb6ef,#3d6fc4);box-shadow:0 3px 0 rgba(0,0,0,.45)}
+  .card.r-rare{background:linear-gradient(180deg,#ffc56b,#e07a14)}
+  .card.r-epic{background:linear-gradient(180deg,#e39cff,#8b2fc2)}
+  .card.r-legendary{background:linear-gradient(135deg,#7ff2e6,#f6e27a 50%,#f59ad6)}
+  .card.r-champion{background:linear-gradient(180deg,#fff2a8,#d9a520)}
+  .card .inner{position:relative;width:100%;height:100%;border-radius:7px;background:linear-gradient(180deg,#f3efe6,#d9d2c3);overflow:hidden;display:flex;flex-direction:column;align-items:center}
+  .card svg{flex:1;width:100%;min-height:0}
+  .card .cname{width:100%;text-align:center;font:900 11px/1.1 'Nunito';color:#fff;background:rgba(20,14,30,.85);padding:3px 2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .ccost{position:absolute;left:-4px;top:-5px;width:24px;height:27px;display:flex;align-items:center;justify-content:center;padding-top:3px;font-size:15px;z-index:2}
+  .card .ccost:before{content:'';position:absolute;inset:0;z-index:-1;border-radius:50% 50% 50% 50%/40% 40% 60% 60%;background:radial-gradient(circle at 40% 40%,#ffb3fb,#c22bc9 70%);border:2px solid #2a0b2e;transform:rotate(0deg)}
+  .card .ccount{position:absolute;right:3px;top:3px;font:900 11px 'Nunito';background:rgba(0,0,0,.6);color:#fff;border-radius:6px;padding:0 4px}
+  .card .cdim{position:absolute;left:0;right:0;top:0;background:rgba(10,8,16,.62);pointer-events:none;border-radius:7px 7px 0 0}
+  .card.sel{transform:translateY(-14px) scale(1.06);z-index:3;animation:aura 0.9s ease-in-out infinite alternate}
+  @keyframes aura{from{box-shadow:0 0 0 3px #fff,0 0 12px 4px rgba(255,240,150,.85),0 6px 0 rgba(0,0,0,.4)}to{box-shadow:0 0 0 3px #fff,0 0 26px 10px rgba(255,220,90,.95),0 6px 0 rgba(0,0,0,.4)}}
+  .card.pending{opacity:.45}
+  .card.locked .inner{filter:grayscale(1) brightness(.6)}
+  .card.mini .cname{font-size:8.5px;padding:2px 1px 3px}
+  .card.mini .ccost{width:18px;height:20px;font-size:11px;left:-3px;top:-4px}
 
   #elixirRow{height:30px;margin-top:7px;display:flex;align-items:center;gap:6px}
   #dropWrap{position:relative;width:34px;height:38px;flex:none;margin-top:-6px}
@@ -84,17 +99,26 @@
   #barTicks i:last-child{border-right:0}
   #bar.x2 #barFill{background:linear-gradient(180deg,#ffb0ff 0%,#ff5af0 45%,#c21ac9 100%)}
 
-  /* bottone emote + mia targhetta */
+  #selName{position:absolute;left:50%;bottom:calc(24% + 18px);transform:translateX(-50%);z-index:8;pointer-events:none;text-align:center;display:none}
+  #selName .n{font-size:24px;line-height:1}
+  #selName .s{font-size:11.5px;font-weight:900;margin-top:2px;background:rgba(0,0,0,.55);border-radius:8px;padding:2px 8px;display:inline-block}
+  @media (max-height:625px){ #selName{bottom:170px} }
+
   #meRow{position:absolute;left:8px;bottom:calc(24% + 8px);display:flex;align-items:flex-end;gap:8px;z-index:6}
   @media (max-height:625px){ #meRow{bottom:158px} }
-  #emoteBtn{pointer-events:auto;width:44px;height:44px;border-radius:12px;border:2px solid rgba(255,255,255,.25);background:linear-gradient(180deg,#5a8be8,#2f5fb8);box-shadow:0 3px 0 #1a3a77;display:flex;align-items:center;justify-content:center;cursor:pointer}
-  #emoteBtn svg{width:26px;height:26px}
+  .roundBtn{pointer-events:auto;width:44px;height:44px;border-radius:12px;border:2px solid rgba(255,255,255,.25);background:linear-gradient(180deg,#5a8be8,#2f5fb8);box-shadow:0 3px 0 #1a3a77;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .roundBtn svg{width:26px;height:26px}
   #emoteMenu{position:absolute;left:0;bottom:52px;display:none;grid-template-columns:1fr 1fr;gap:6px;background:rgba(20,14,30,.92);padding:8px;border-radius:12px;border:2px solid rgba(255,255,255,.15);width:230px}
   #emoteMenu.open{display:grid}
   #emoteMenu button{font:900 13px 'Nunito';color:#222;background:#fff;border:0;border-radius:9px;padding:8px 6px;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.3)}
-  #emoteMenu button:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.3)}
+  #abilityBtn{position:absolute;right:10px;bottom:calc(24% + 10px);z-index:6;width:62px;height:62px;border-radius:50%;border:3px solid #fff3b0;
+    background:radial-gradient(circle at 40% 35%,#fff2a8,#d9a520 70%);box-shadow:0 4px 0 #8a6510,0 0 16px rgba(255,220,90,.7);display:none;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:#4a2a00}
+  #abilityBtn .t{font:13px 'Lilita One';line-height:1}
+  #abilityBtn .c{font:900 10px 'Nunito'}
+  #abilityBtn .cd{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;font:18px 'Lilita One';color:#fff}
+  #abilityBtn.off{filter:grayscale(.7) brightness(.8)}
+  @media (max-height:625px){ #abilityBtn{bottom:160px} }
 
-  /* banner centrali */
   #banner{position:absolute;left:0;right:0;top:40%;text-align:center;z-index:8;pointer-events:none;opacity:0;transform:scale(.6);transition:all .25s cubic-bezier(.3,1.5,.6,1)}
   #banner.show{opacity:1;transform:scale(1)}
   #banner .big{font-size:44px;line-height:1}
@@ -102,23 +126,23 @@
   #countdown{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:9;pointer-events:none;font-size:110px}
   #countdown.on{display:flex}
 
-  /* stato connessione */
   #netPill{position:absolute;left:8px;top:58px;z-index:6;font-size:11px;font-weight:900;padding:3px 9px;border-radius:20px;background:rgba(20,14,30,.75);display:flex;align-items:center;gap:5px;pointer-events:auto;cursor:pointer;border:1.5px solid rgba(255,255,255,.12)}
   #netPill i{width:8px;height:8px;border-radius:50%;background:#888}
   #netPill.ok i{background:#4ade80;box-shadow:0 0 6px #4ade80}
   #netPill.warn i{background:#fbbf24}
   #netPill.bad i{background:#ef4444}
-  #debug{position:absolute;left:8px;top:82px;z-index:12;background:rgba(10,8,16,.92);border:1.5px solid rgba(255,255,255,.2);border-radius:10px;padding:8px 10px;font:700 11px/1.5 ui-monospace,monospace;display:none;min-width:220px}
+  #muteBtn{position:absolute;left:8px;top:84px;z-index:6;width:30px;height:26px;border-radius:9px;background:rgba(20,14,30,.75);border:1.5px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px}
+  #debug{position:absolute;left:8px;top:114px;z-index:12;background:rgba(10,8,16,.92);border:1.5px solid rgba(255,255,255,.2);border-radius:10px;padding:8px 10px;font:700 11px/1.5 ui-monospace,monospace;display:none;min-width:220px}
   #debug.open{display:block}
   #debug label{display:flex;gap:6px;align-items:center;margin-top:4px;cursor:pointer}
 
-  /* ---------- schermate (lobby / fine) ---------- */
+  /* schermate */
   .screen{position:absolute;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;padding:22px;text-align:center;
     background:radial-gradient(ellipse at 50% 20%,rgba(78,52,120,.92),rgba(18,12,28,.96) 70%)}
   .screen.on{display:flex}
   .title{font-size:38px;line-height:1;color:var(--oro)}
-  .subtitle{font-size:14px;opacity:.85;margin:8px 0 22px;font-weight:800}
-  .panel{width:100%;max-width:330px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .subtitle{font-size:14px;opacity:.85;margin:8px 0 18px;font-weight:800}
+  .panel{width:100%;max-width:340px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
   .panel label{font-size:12px;font-weight:900;text-align:left;opacity:.85}
   .inp{width:100%;font:800 16px 'Nunito';padding:10px 12px;border-radius:10px;border:2px solid rgba(255,255,255,.18);background:rgba(0,0,0,.35);color:#fff;outline:none;user-select:text;-webkit-user-select:text}
   .inp:focus{border-color:var(--oro)}
@@ -126,6 +150,7 @@
   .btn:active{transform:translateY(3px)}
   .btn.y{background:linear-gradient(180deg,#ffd75a,#f2a51c);color:#4a2a00;text-shadow:0 1px 0 rgba(255,255,255,.4);box-shadow:0 4px 0 #a5680b}
   .btn.b{background:linear-gradient(180deg,#5fa2ff,#2f6fd6);box-shadow:0 4px 0 #1b4590}
+  .btn.p{background:linear-gradient(180deg,#c77bff,#8a3fd1);box-shadow:0 4px 0 #5a2491}
   .btn.g{background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.08));box-shadow:0 4px 0 rgba(0,0,0,.35);font-size:16px}
   .btn:disabled{opacity:.5;cursor:default}
   .row{display:flex;gap:8px}
@@ -134,12 +159,30 @@
   .linkbox{font:700 11px ui-monospace,monospace;background:rgba(0,0,0,.4);border-radius:8px;padding:8px;word-break:break-all;user-select:text;-webkit-user-select:text;text-align:left}
   .hint{font-size:12px;opacity:.8;font-weight:700;line-height:1.4}
   .status{font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;gap:8px}
-  .spin{width:14px;height:14px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:var(--oro);animation:sp 1s linear infinite}
+  .spin{width:14px;height:14px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:var(--oro);animation:sp 1s linear infinite;flex:none}
   @keyframes sp{to{transform:rotate(360deg)}}
   .err{color:#ffb3ae;font-size:12.5px;font-weight:800;line-height:1.4}
+  #deckPreview{display:grid;grid-template-columns:repeat(8,1fr);gap:3px}
+  #deckPreview .card{height:auto;aspect-ratio:3/4}
   #endScreen .res{font-size:48px;margin-bottom:6px}
   #endScreen .crowns-big{display:flex;gap:30px;justify-content:center;margin:12px 0 22px;font-size:22px}
-  #toast{position:absolute;left:50%;bottom:28%;transform:translateX(-50%);background:rgba(0,0,0,.85);padding:8px 14px;border-radius:10px;font-weight:900;font-size:13px;z-index:30;display:none;white-space:nowrap}
+  #toast{position:absolute;left:50%;bottom:30%;transform:translateX(-50%);background:rgba(0,0,0,.85);padding:8px 14px;border-radius:10px;font-weight:900;font-size:13px;z-index:30;display:none;white-space:nowrap}
+
+  /* mazzo */
+  #deckScreen{justify-content:flex-start;padding:14px 12px;overflow-y:auto}
+  #deckScreen .head{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:420px;margin-bottom:8px}
+  #deckSlots{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;width:100%;max-width:420px;margin-bottom:8px}
+  #deckSlots .card,#deckSlots .slotEmpty{height:auto;aspect-ratio:3/4;font-size:14px}
+  #allCards{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;width:100%;max-width:420px}
+  #allCards .card{height:auto;aspect-ratio:3/4}
+  #allCards .card.inDeck{outline:3px solid #4ade80;outline-offset:1px}
+  #allCards .card.inDeck:after{content:'✓';position:absolute;right:-5px;bottom:-5px;width:18px;height:18px;border-radius:50%;background:#22c55e;color:#fff;font:900 12px/18px 'Nunito';text-align:center}
+  #cardInfo{width:100%;max-width:420px;margin-top:10px;background:rgba(0,0,0,.35);border-radius:12px;padding:10px;text-align:left;font-size:12.5px;font-weight:800;min-height:96px}
+  #cardInfo .t{font-size:18px;margin-bottom:4px}
+  #cardInfo .g{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px}
+  #cardInfo .g span{opacity:.7}
+  #deckScreen .foot{display:flex;gap:8px;width:100%;max-width:420px;margin-top:10px}
+  #deckScreen .foot .btn{flex:1}
 </style>
 </head>
 <body>
@@ -148,10 +191,11 @@
   <div id="labels"></div>
 
   <div id="hudTop">
-    <div class="nameplate red"><div class="n font-g stroke" id="opName">Avversario</div><div class="s" id="opSub">in attesa…</div></div>
+    <div class="nameplate"><div class="n font-g stroke" id="opName">Avversario</div><div class="s" id="opSub">in attesa…</div></div>
     <div id="timerBox"><div class="l" id="timerLbl">Tempo rimasto</div><div id="timer" class="font-g stroke">3:00</div><div id="multBadge" class="font-g">x2</div></div>
   </div>
-  <div id="netPill" title="Dettagli connessione"><i></i><span id="netTxt">offline</span></div>
+  <div id="netPill" title="Dettagli connessione"><i></i><span id="netTxt">server…</span></div>
+  <div id="muteBtn" title="Audio">🔊</div>
   <div id="debug"></div>
 
   <div id="crowns">
@@ -160,22 +204,19 @@
   </div>
 
   <div id="meRow">
-    <div id="emoteBtn" title="Emote"><svg viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H10l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="#fff"/><circle cx="8.5" cy="10.5" r="1.4" fill="#2f5fb8"/><circle cx="15.5" cy="10.5" r="1.4" fill="#2f5fb8"/></svg></div>
+    <div id="emoteBtn" class="roundBtn" title="Emote"><svg viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H10l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="#fff"/><circle cx="8.5" cy="10.5" r="1.4" fill="#2f5fb8"/><circle cx="15.5" cy="10.5" r="1.4" fill="#2f5fb8"/></svg></div>
     <div id="emoteMenu"></div>
   </div>
+  <div id="abilityBtn"><div class="t">Scatto</div><div class="c">1 elisir</div><div class="cd"></div></div>
+  <div id="selName"><div class="n font-g stroke"></div><div class="s"></div></div>
 
   <div id="banner"><div class="big font-g stroke" id="bannerBig"></div><div class="sm font-g stroke" id="bannerSm"></div></div>
   <div id="countdown" class="font-g stroke"></div>
 
   <div id="tray">
     <div id="cardsRow">
-      <div id="nextCol"><div class="lbl">Prossima</div><div class="slot" id="nextSlot"><span class="q font-g">?</span></div></div>
-      <div id="hand">
-        <div class="slot"><span class="cost font-g"></span><span class="q font-g">?</span></div>
-        <div class="slot"><span class="cost font-g"></span><span class="q font-g">?</span></div>
-        <div class="slot"><span class="cost font-g"></span><span class="q font-g">?</span></div>
-        <div class="slot"><span class="cost font-g"></span><span class="q font-g">?</span></div>
-      </div>
+      <div id="nextCol"><div class="lbl">Prossima</div><div id="nextSlot"><div class="slotEmpty">?</div></div></div>
+      <div id="hand"></div>
     </div>
     <div id="elixirRow">
       <div id="dropWrap">
@@ -195,9 +236,12 @@
     <div class="panel" id="lobbyMain">
       <label for="nick">Il tuo nome</label>
       <input class="inp" id="nick" maxlength="16" placeholder="es. Pietro" autocomplete="off">
+      <label>Il tuo mazzo</label>
+      <div id="deckPreview"></div>
+      <button class="btn p" id="btnDeck" style="font-size:16px;padding:9px">Modifica mazzo</button>
       <button class="btn y" id="btnCreate">Crea partita</button>
       <div class="row"><input class="inp" id="codeIn" maxlength="12" placeholder="codice partita" autocomplete="off"><button class="btn b" id="btnJoin" style="font-size:17px">Entra</button></div>
-      <button class="btn g" id="btnSolo">Prova l'arena da solo</button>
+      <button class="btn g" id="btnSolo">Allenamento contro il bot</button>
       <div class="err" id="lobbyErr"></div>
     </div>
     <div class="panel" id="lobbyWait" style="display:none">
@@ -211,6 +255,16 @@
       <div class="status" id="waitStatus"><div class="spin"></div><span>In attesa dell'avversario…</span></div>
       <button class="btn g" id="btnLeave">Annulla</button>
     </div>
+  </div>
+
+  <!-- MAZZO -->
+  <div class="screen" id="deckScreen">
+    <div class="head"><div class="font-g stroke" style="font-size:24px">Il tuo mazzo</div><div class="hint" id="deckAvg"></div></div>
+    <div id="deckSlots"></div>
+    <div class="hint" style="margin:2px 0 8px">Tocca una carta per vederla, tocca di nuovo per metterla o toglierla dal mazzo (8 carte).</div>
+    <div id="allCards"></div>
+    <div id="cardInfo"></div>
+    <div class="foot"><button class="btn g" id="btnDeckCancel">Annulla</button><button class="btn y" id="btnDeckSave">Salva</button></div>
   </div>
 
   <!-- FINE PARTITA -->
@@ -228,31 +282,20 @@
   <div id="toast"></div>
 </div></div>
 
+<script src="vendor/three.min.js"></script>
+<script src="sim.js"></script>
 <script>
 (() => {
 'use strict';
-// =====================================================================
-//  CONFIGURAZIONE (valori predefiniti: quelli veri arrivano dal server)
-// =====================================================================
-const CFG = {
-  W: 18, H: 32,                // griglia arena in caselle (come CR)
-  ELIXIR_START: 5,
-  ELIXIR_MAX: 10,
-  ELIXIR_MS: 2800,             // 1 elisir ogni 2,8 s (x1)
-  REG_MS: 180000,              // 3:00 tempo regolamentare
-  X2_AT: 120000,               // ultimo minuto: elisir x2
-  OT_MS: 120000,               // supplementare 2:00
-  OT_X3_AT: 60000,             // ultimo minuto di supplementare: x3
-  COUNTDOWN_MS: 3000,
-  KING_HP: 4824, PRINCESS_HP: 3052
-};
-
+const SIM = window.BazooSim;
+const CFG = SIM.CFG, CARDS = SIM.CARDS;
 const $ = id => document.getElementById(id);
-const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
-const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
-const lsSet = (k,v) => { try { localStorage.setItem(k,v); } catch(e){} };
-const ssGet = k => { try { return sessionStorage.getItem(k); } catch(e){ return null; } };
-const ssSet = (k,v) => { try { sessionStorage.setItem(k,v); } catch(e){} };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const ssGet = k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } };
+const ssSet = (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) {} };
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // =====================================================================
 //  SCENA 3D
@@ -268,10 +311,8 @@ renderer.outputEncoding = THREE.sRGBEncoding;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9fd3f0);
 scene.fog = new THREE.Fog(0x9fd3f0, 70, 120);
+const camera = new THREE.PerspectiveCamera(36, 9 / 16, 0.5, 300);
 
-const camera = new THREE.PerspectiveCamera(34, 9/16, 0.5, 300);
-
-// luci
 scene.add(new THREE.HemisphereLight(0xfff4dc, 0x6b6248, 0.72));
 const sun = new THREE.DirectionalLight(0xfff0d0, 0.95);
 sun.position.set(-14, 34, 12);
@@ -281,10 +322,10 @@ Object.assign(sun.shadow.camera, { left: -26, right: 26, top: 30, bottom: -30, n
 sun.shadow.bias = -0.0008;
 scene.add(sun);
 
-// ---- texture procedurali ------------------------------------------------
+// ---- texture procedurali ----
 function canvasTex(w, h, draw, repX = 1, repY = 1) {
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
-  const g = cv.getContext('2d'); draw(g, w, h);
+  draw(cv.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(cv);
   t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repX, repY);
   t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
@@ -299,14 +340,11 @@ function speckle(g, w, h, n, cols, size = 1.6) {
   }
   g.globalAlpha = 1;
 }
-// pavimento "nocciola chiaro" (calcestruzzo architettonico della piazza), lastre 2x1 caselle
 const pavingTex = canvasTex(512, 512, (g, w, h) => {
   g.fillStyle = '#d9c4a0'; g.fillRect(0, 0, w, h);
-  // lastre: 4 colonne x 8 righe => ogni lastra = 2 caselle x 1 casella se repeat (W/8, H/8)
   const cw = w / 4, rh = h / 8;
   for (let r = 0; r < 8; r++) for (let c = 0; c < 4; c++) {
-    const off = (r % 2) ? cw / 2 : 0;
-    const v = (Math.random() * 14 - 7) | 0;
+    const off = (r % 2) ? cw / 2 : 0, v = (Math.random() * 14 - 7) | 0;
     g.fillStyle = `rgb(${217 + v},${196 + v},${160 + v})`;
     g.fillRect(c * cw + off, r * rh, cw, rh);
     if (off) g.fillRect(-cw / 2, r * rh, cw, rh);
@@ -318,8 +356,7 @@ const pavingTex = canvasTex(512, 512, (g, w, h) => {
     const off = (r % 2) ? cw / 2 : 0;
     for (let c = 0; c <= 4; c++) { const x = c * cw + off; g.beginPath(); g.moveTo(x, r * rh); g.lineTo(x, (r + 1) * rh); g.stroke(); }
   }
-}, CFG.W / 8, CFG.H / 8);
-// pietra chiara (percorsi / ponti)
+});
 const stoneTex = canvasTex(256, 256, (g, w, h) => {
   g.fillStyle = '#e7dcc6'; g.fillRect(0, 0, w, h);
   speckle(g, w, h, 4000, ['#cbbd9f', '#f6efe0', '#b4a586'], 2);
@@ -335,8 +372,7 @@ const brickTex = canvasTex(256, 256, (g, w, h) => {
   g.fillStyle = '#e2cfb2'; g.fillRect(0, 0, w, h);
   const bh = h / 16, bw = w / 6;
   for (let r = 0; r < 16; r++) for (let c = -1; c < 7; c++) {
-    const x = c * bw + (r % 2 ? bw / 2 : 0);
-    const v = (Math.random() * 30 - 15) | 0;
+    const x = c * bw + (r % 2 ? bw / 2 : 0), v = (Math.random() * 30 - 15) | 0;
     g.fillStyle = `rgb(${178 + v},${82 + v * .6},${54 + v * .4})`;
     g.fillRect(x + 1.5, r * bh + 1.5, bw - 3, bh - 3);
   }
@@ -353,7 +389,6 @@ const waterTex = canvasTex(256, 256, (g, w, h) => {
 }, 6, 1);
 
 const M = {
-  paving: new THREE.MeshLambertMaterial({ map: pavingTex }),
   stone: new THREE.MeshLambertMaterial({ map: stoneTex }),
   stonePlain: new THREE.MeshLambertMaterial({ color: 0xd8ccb2 }),
   grass: new THREE.MeshLambertMaterial({ map: grassTex }),
@@ -369,7 +404,8 @@ const M = {
   facade: new THREE.MeshLambertMaterial({ color: 0xe6d3ad }),
   facadeD: new THREE.MeshLambertMaterial({ color: 0xcdb68c }),
   window: new THREE.MeshLambertMaterial({ color: 0x3a4a5a }),
-  roof: new THREE.MeshLambertMaterial({ color: 0x9a5b45 })
+  roof: new THREE.MeshLambertMaterial({ color: 0x9a5b45 }),
+  rubble: new THREE.MeshLambertMaterial({ color: 0x8c6a55 })
 };
 const leafMats = [0x4e8f36, 0x5fa43f, 0x6db349, 0x3f7d2c].map(c => new THREE.MeshLambertMaterial({ color: c }));
 
@@ -378,99 +414,67 @@ function box(w, h, d, mat, x = 0, y = 0, z = 0, parent = scene, shadow = true) {
   m.position.set(x, y, z); m.castShadow = shadow; m.receiveShadow = true;
   parent.add(m); return m;
 }
-// coordinate: casella (tx,ty) con ty=0 sul fondo del giocatore "host"
-const T2W = (tx, ty) => ({ x: tx - CFG.W / 2, z: CFG.H / 2 - ty });
 
-// ---- terreno -------------------------------------------------------------
+// ---- terreno, fiume, giardino, Politecnico ----
 const env = new THREE.Group(); scene.add(env);
 {
-  // prato esterno (giardino della piazza)
   for (const s of [1, -1]) {
     const g = new THREE.Mesh(new THREE.PlaneGeometry(140, 70), M.grass);
     g.rotation.x = -Math.PI / 2; g.position.set(0, -0.02, s * 36); g.receiveShadow = true; env.add(g);
-  }
-
-  // pavimentazione arena: due metà (il fiume occupa le caselle 15-17)
-  for (const s of [1, -1]) {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(CFG.W, 15), M.paving);
-    p.rotation.x = -Math.PI / 2; p.position.set(0, 0, s * 8.5); p.receiveShadow = true;
-    // allinea la texture alla griglia
     const tx = pavingTex.clone(); tx.needsUpdate = true; tx.repeat.set(CFG.W / 8, 15 / 8);
-    p.material = new THREE.MeshLambertMaterial({ map: tx });
-    env.add(p);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(CFG.W, 15), new THREE.MeshLambertMaterial({ map: tx }));
+    p.rotation.x = -Math.PI / 2; p.position.set(0, 0, s * 8.5); p.receiveShadow = true; env.add(p);
   }
-  // corsie in pietra chiara (dalle torri ai ponti) e viale centrale verso il re
   const lane = (x, z, w, d) => {
     const t = stoneTex.clone(); t.needsUpdate = true; t.repeat.set(w / 2, d / 2);
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshLambertMaterial({ map: t }));
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.01, z); m.receiveShadow = true; env.add(m);
   };
-  for (const s of [1, -1]) {
-    lane(-5.5, s * 5.0, 3, 8);     // corsia sinistra (dal ponte alla torre)
-    lane(5.5, s * 5.0, 3, 8);      // corsia destra
-    lane(0, s * 12.2, 3.2, 6.6);   // viale del re
-    lane(0, s * 9.4, 14, 1.4);     // traversa tra le torri
-  }
-  // bordo dell'arena: cordolo in granito + siepe
+  for (const s of [1, -1]) { lane(-5.5, s * 5.0, 3, 8); lane(5.5, s * 5.0, 3, 8); lane(0, s * 12.2, 3.2, 6.6); lane(0, s * 9.4, 14, 1.4); }
   const curbMat = new THREE.MeshLambertMaterial({ color: 0xa79f92 });
   box(0.4, 0.35, CFG.H + 0.8, curbMat, -CFG.W / 2 - 0.2, 0.17, 0, env);
   box(0.4, 0.35, CFG.H + 0.8, curbMat, CFG.W / 2 + 0.2, 0.17, 0, env);
   box(CFG.W + 0.8, 0.35, 0.4, curbMat, 0, 0.17, -CFG.H / 2 - 0.2, env);
   box(CFG.W + 0.8, 0.35, 0.4, curbMat, 0, 0.17, CFG.H / 2 + 0.2, env);
   for (const s of [-1, 1]) {
-    for (const zs of [1, -1]) {
-      box(0.9, 0.8, 14.2, M.hedge, s * (CFG.W / 2 + 0.95), 0.4, zs * 8.9, env);
-    }
+    for (const zs of [1, -1]) box(0.9, 0.8, 14.2, M.hedge, s * (CFG.W / 2 + 0.95), 0.4, zs * 8.9, env);
     box(CFG.W + 2.8, 0.8, 0.9, M.hedge, 0, 0.4, s * (CFG.H / 2 + 0.95), env);
   }
 }
-
-// ---- fiume (canale d'acqua) con 2 ponti -----------------------------------
-const waterMeshes = [];
 {
-  const RIV_D = 2;  // 2 caselle
-  // letto del canale
+  const RIV_D = 2;
   box(70, 0.1, RIV_D, new THREE.MeshLambertMaterial({ color: 0x24627d }), 0, -0.55, 0, env, false);
   const w = new THREE.Mesh(new THREE.PlaneGeometry(70, RIV_D), M.water);
-  w.rotation.x = -Math.PI / 2; w.position.y = -0.22; env.add(w); waterMeshes.push(w);
-  // sponde in pietra
-  const bankMat = new THREE.MeshLambertMaterial({ map: stoneTex });
+  w.rotation.x = -Math.PI / 2; w.position.y = -0.22; env.add(w);
   for (const s of [1, -1]) {
-    box(70, 0.62, 0.22, bankMat, 0, -0.27, s * (RIV_D / 2 + 0.11), env);
+    box(70, 0.62, 0.22, M.stone, 0, -0.27, s * (RIV_D / 2 + 0.11), env);
     box(70, 0.08, 0.5, M.stonePlain, 0, 0.04, s * (RIV_D / 2 + 0.25), env);
   }
-  // ponti (3 caselle di larghezza, centrati sulle corsie)
   for (const x of [-5.5, 5.5]) {
     const br = new THREE.Group(); br.position.x = x; env.add(br);
     const t = stoneTex.clone(); t.needsUpdate = true; t.repeat.set(1.5, 1.4);
-    const deckMat = new THREE.MeshLambertMaterial({ map: t });
-    box(3, 0.24, RIV_D + 1.0, deckMat, 0, 0.08, 0, br);
-    // parapetti in ferro battuto verde (stile milanese)
+    box(3, 0.24, RIV_D + 1.0, new THREE.MeshLambertMaterial({ map: t }), 0, 0.08, 0, br);
     for (const s of [-1, 1]) {
       box(0.12, 0.42, RIV_D + 1.0, M.iron, s * 1.44, 0.41, 0, br);
       for (const pz of [-(RIV_D + 1) / 2, (RIV_D + 1) / 2]) box(0.28, 0.65, 0.28, M.stonePlain, s * 1.44, 0.45, pz, br);
     }
   }
 }
-
-// ---- alberi, panchine, lampioni -----------------------------------------
 function tree(x, z, s = 1) {
   const t = new THREE.Group(); t.position.set(x, 0, z); t.scale.setScalar(s);
   const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, 2.6, 7), M.trunk);
   tr.position.y = 1.3; tr.castShadow = true; t.add(tr);
   const n = 4 + ((Math.random() * 3) | 0);
   for (let i = 0; i < n; i++) {
-    const r = 1.1 + Math.random() * 0.7;
-    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), leafMats[(Math.random() * leafMats.length) | 0]);
+    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(1.1 + Math.random() * 0.7, 1), leafMats[(Math.random() * leafMats.length) | 0]);
     b.position.set((Math.random() - .5) * 1.8, 3.1 + Math.random() * 1.4, (Math.random() - .5) * 1.8);
     b.castShadow = true; t.add(b);
   }
-  env.add(t); return t;
+  env.add(t);
 }
 function bench(x, z, rotY = 0) {
   const b = new THREE.Group(); b.position.set(x, 0, z); b.rotation.y = rotY; env.add(b);
-  box(1.6, 0.08, 0.45, M.wood, 0, 0.45, 0, b);
-  box(1.6, 0.35, 0.07, M.wood, 0, 0.7, -0.2, b);
+  box(1.6, 0.08, 0.45, M.wood, 0, 0.45, 0, b); box(1.6, 0.35, 0.07, M.wood, 0, 0.7, -0.2, b);
   for (const s of [-.65, .65]) box(0.08, 0.45, 0.4, M.iron, s, 0.22, 0, b);
 }
 function lamp(x, z) {
@@ -480,30 +484,23 @@ function lamp(x, z) {
   const cap = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.3, 4), M.iron); cap.position.y = 3.92; cap.rotation.y = Math.PI / 4; l.add(cap);
 }
 {
-  // filari di platani nel giardino ai lati dell'arena
   for (let z = -26; z <= 26; z += 4.2) {
     if (Math.abs(z) < 2.2) continue;
     tree(-12.6 + (Math.random() - .5), z + (Math.random() - .5), 0.95 + Math.random() * 0.25);
     tree(12.6 + (Math.random() - .5), z + (Math.random() - .5), 0.95 + Math.random() * 0.25);
-    tree(-18 + (Math.random() - .5) * 2, z + 2, 1.1);
-    tree(18 + (Math.random() - .5) * 2, z + 2, 1.1);
+    tree(-18 + (Math.random() - .5) * 2, z + 2, 1.1); tree(18 + (Math.random() - .5) * 2, z + 2, 1.1);
   }
   for (const z of [-12, -4, 4, 12]) { bench(-10.4, z, Math.PI / 2); bench(10.4, z, -Math.PI / 2); }
   for (const z of [-16.5, -8, 8, 16.5]) { lamp(-9.9, z); lamp(9.9, z); }
-  // vialetti nel giardino
-  const path = (x, z, w, d) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), M.stone); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.0, z); m.receiveShadow = true; env.add(m); };
-  path(-10.6, 0, 1.4, 60); path(10.6, 0, 1.4, 60);
-  path(0, -20.5, 40, 4); path(0, 20.5, 40, 3);
+  const path = (x, z, w, d) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), M.stone); m.rotation.x = -Math.PI / 2; m.position.set(x, 0, z); m.receiveShadow = true; env.add(m); };
+  path(-10.6, 0, 1.4, 60); path(10.6, 0, 1.4, 60); path(0, -20.5, 40, 4); path(0, 20.5, 40, 3);
 }
-
-// ---- Politecnico (facciata principale) sul lato lontano --------------------
 {
   const P = new THREE.Group(); P.position.set(0, 0, -25.5); env.add(P);
   const FW = 46, FH = 11, FD = 6;
   box(FW, FH, FD, M.facade, 0, FH / 2, 0, P);
-  box(FW + 0.6, 0.6, FD + 0.6, M.facadeD, 0, FH + 0.3, 0, P);        // cornicione
-  box(FW + 0.4, 1.2, FD + 0.4, M.facadeD, 0, 0.6, 0, P);              // zoccolo
-  // corpo centrale avanzato con portico
+  box(FW + 0.6, 0.6, FD + 0.6, M.facadeD, 0, FH + 0.3, 0, P);
+  box(FW + 0.4, 1.2, FD + 0.4, M.facadeD, 0, 0.6, 0, P);
   box(16, FH + 1.6, 2.2, M.facade, 0, (FH + 1.6) / 2, FD / 2 + 1.1, P);
   box(16.6, 0.7, 2.8, M.facadeD, 0, FH + 1.95, FD / 2 + 1.1, P);
   for (let i = 0; i < 6; i++) {
@@ -512,260 +509,1103 @@ function lamp(x, z) {
     box(1.1, 0.5, 1.1, M.facadeD, -6.25 + i * 2.5, 7.95, FD / 2 + 3.0, P);
     box(1.1, 0.6, 1.1, M.facadeD, -6.25 + i * 2.5, 1.5, FD / 2 + 3.0, P);
   }
-  box(15, 0.9, 1.6, M.facadeD, 0, 8.55, FD / 2 + 3.0, P);              // trabeazione
-  box(16, 1.2, 4.5, M.stonePlain, 0, 0.6, FD / 2 + 3.4, P);            // scalinata
-  box(3.2, 4.6, 0.2, M.dark, 0, 3.5, FD / 2 + 2.25, P);                // portone
-  // finestre
+  box(15, 0.9, 1.6, M.facadeD, 0, 8.55, FD / 2 + 3.0, P);
+  box(16, 1.2, 4.5, M.stonePlain, 0, 0.6, FD / 2 + 3.4, P);
+  box(3.2, 4.6, 0.2, M.dark, 0, 3.5, FD / 2 + 2.25, P);
   for (let fl = 0; fl < 3; fl++) for (let i = -10; i <= 10; i++) {
     if (Math.abs(i) <= 3) continue;
     box(1.0, 1.7, 0.15, M.window, i * 2.1, 2.6 + fl * 3.0, FD / 2 + 0.03, P, false);
     box(1.3, 0.18, 0.3, M.facadeD, i * 2.1, 1.7 + fl * 3.0, FD / 2 + 0.1, P, false);
   }
-  for (let fl = 0; fl < 2; fl++) for (const i of [-2, 0, 2]) box(1.1, 1.8, 0.15, M.window, i * 2.4, 9.8 + fl * -0.0 + fl * 0, FD / 2 + 2.23, P, false);
-  // tetto
+  for (const i of [-2, 0, 2]) box(1.1, 1.8, 0.15, M.window, i * 2.4, 9.8, FD / 2 + 2.23, P, false);
   const roof = new THREE.Mesh(new THREE.BoxGeometry(FW, 1.5, FD - 1), M.roof); roof.position.set(0, FH + 1.2, -0.5); P.add(roof);
-  // ali laterali
   box(9, 9, 18, M.facade, -FW / 2 + 4.5, 4.5, 10, P);
   box(9, 9, 18, M.facade, FW / 2 - 4.5, 4.5, 10, P);
-  for (const s of [-1, 1]) for (let fl = 0; fl < 2; fl++) for (let k = 0; k < 6; k++)
-    box(0.15, 1.6, 1.0, M.window, s * (FW / 2 - 9.05), 2.6 + fl * 3.0, 3 + k * 2.6, P, false);
 }
 
-// ---- torri (stile mattoni milanesi con merli a coda di rondine) ------------
+// =====================================================================
+//  STATO
+// =====================================================================
+const S = {
+  mode: 'none',        // none | online | solo
+  role: 'host',
+  phase: 'idle',       // idle | wait | count | battle | end
+  clock: 0,
+  elixir: CFG.ELIXIR_START,
+  hand: [], next: null,
+  towersHp: SIM.TOWERS.map(t => SIM.TOWER_STATS[t.kind].hp),
+  towersAlive: SIM.TOWERS.map(() => true),
+  towersActive: SIM.TOWERS.map(t => t.kind === 'princess'),
+  crowns: { host: 0, guest: 0 },
+  nick: 'Giocatore', opNick: 'Avversario',
+  code: null,
+  sel: null,           // indice della carta selezionata nella mano (0..3)
+  pending: null,       // giocata inviata in attesa di conferma
+  champ: null
+};
+const myTeam = () => S.role === 'guest' ? 1 : 0;
+// coordinate di partita (caselle) -> mondo 3D: ognuno vede il proprio lato in basso
+function viewXZ(x, y) { const [lx, ly] = SIM.L(myTeam(), x, y); return { x: lx - 9, z: 16 - ly }; }
+
+// =====================================================================
+//  TORRI (più piccole) + TIRATORI
+// =====================================================================
 const merlonGeo = (() => {
-  const w = 0.42, h = 0.55, n = 0.2, s = new THREE.Shape();
+  const w = 0.36, h = 0.45, n = 0.17, s = new THREE.Shape();
   s.moveTo(-w / 2, 0); s.lineTo(w / 2, 0); s.lineTo(w / 2, h); s.lineTo(0, h - n); s.lineTo(-w / 2, h); s.lineTo(-w / 2, 0);
-  const g = new THREE.ExtrudeGeometry(s, { depth: 0.22, bevelEnabled: false }); g.translate(0, 0, -0.11); return g;
+  const g = new THREE.ExtrudeGeometry(s, { depth: 0.18, bevelEnabled: false }); g.translate(0, 0, -0.09); return g;
 })();
 function crenellate(parent, size, y, perSide) {
-  const half = size / 2 - 0.12;
-  for (let side = 0; side < 4; side++) {
-    for (let i = 0; i < perSide; i++) {
-      const t = (i + 0.5) / perSide * size - size / 2;
-      const m = new THREE.Mesh(merlonGeo, M.brick); m.castShadow = true;
-      const a = side * Math.PI / 2;
-      m.position.set(Math.cos(a) * half - Math.sin(a) * t, y, Math.sin(a) * half + Math.cos(a) * t);
-      m.rotation.y = -a + Math.PI / 2;
-      parent.add(m);
-    }
+  const half = size / 2 - 0.1;
+  for (let side = 0; side < 4; side++) for (let i = 0; i < perSide; i++) {
+    const t = (i + 0.5) / perSide * size - size / 2;
+    const m = new THREE.Mesh(merlonGeo, M.brick); m.castShadow = true;
+    const a = side * Math.PI / 2;
+    m.position.set(Math.cos(a) * half - Math.sin(a) * t, y, Math.sin(a) * half + Math.cos(a) * t);
+    m.rotation.y = -a + Math.PI / 2;
+    parent.add(m);
   }
 }
 function banner(parent, mat, w, h, x, y, z, rotY) {
   const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = rotY; parent.add(g);
   const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(w / 2, -h); sh.lineTo(0, -h - w * 0.35); sh.lineTo(-w / 2, -h); sh.lineTo(-w / 2, 0);
-  const m = new THREE.Mesh(new THREE.ShapeGeometry(sh), mat); g.add(m);
+  g.add(new THREE.Mesh(new THREE.ShapeGeometry(sh), mat));
   const em = new THREE.Mesh(new THREE.CircleGeometry(w * 0.26, 20), M.gold); em.position.set(0, -h * 0.45, 0.01); g.add(em);
-  const em2 = new THREE.Mesh(new THREE.CircleGeometry(w * 0.15, 20), mat); em2.position.set(0, -h * 0.45, 0.02); g.add(em2);
-  box(w + 0.12, 0.08, 0.08, M.gold, 0, 0, 0.02, g, false);
-}
-function flag(parent, mat, y, h = 1.3, x = 0, z = 0) {
-  const g = new THREE.Group(); g.position.set(x, 0, z); parent.add(g);
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, h, 6), M.dark); pole.position.y = y + h / 2; g.add(pole);
-  const geo = new THREE.PlaneGeometry(0.75, 0.45, 6, 1); geo.translate(0.375, 0, 0);
-  const f = new THREE.Mesh(geo, mat);
-  f.position.set(0, y + h - 0.25, 0); g.add(f); flags.push(f);
-  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), M.gold); ball.position.y = y + h + 0.05; g.add(ball);
 }
 const flags = [];
-function makeTeamMats() {
-  return { cloth: new THREE.MeshLambertMaterial({ color: 0x2f7fe0, side: THREE.DoubleSide }), roof: new THREE.MeshLambertMaterial({ color: 0x2f7fe0 }) };
+function flag(parent, mat, y, h, x = 0, z = 0) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); parent.add(g);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, h, 6), M.dark); pole.position.y = y + h / 2; g.add(pole);
+  const geo = new THREE.PlaneGeometry(0.6, 0.36, 6, 1); geo.translate(0.3, 0, 0);
+  const f = new THREE.Mesh(geo, mat); f.position.set(0, y + h - 0.2, 0); g.add(f); flags.push(f);
 }
-function princessTower(teamMats) {
-  const t = new THREE.Group();
-  box(2.95, 0.4, 2.95, M.stonePlain, 0, 0.2, 0, t);
-  box(2.55, 2.6, 2.55, M.brick, 0, 1.7, 0, t);
-  box(2.8, 0.2, 2.8, M.stonePlain, 0, 3.08, 0, t);
-  box(2.62, 0.35, 2.62, M.brick, 0, 3.35, 0, t);
-  crenellate(t, 2.62, 3.5, 4);
-  // finestre ad arco (feritoie)
-  for (const s of [1, -1]) {
-    box(0.4, 0.75, 0.06, M.dark, 0, 2.3, s * 1.29, t, false);
-    banner(t, teamMats.cloth, 0.9, 1.0, 0.85 * s, 2.9, s * 1.3, s > 0 ? 0 : Math.PI);
-    banner(t, teamMats.cloth, 0.9, 1.0, -0.85 * s, 2.9, s * 1.3, s > 0 ? 0 : Math.PI);
+const teamMat = {
+  me: { cloth: new THREE.MeshLambertMaterial({ color: 0x2f7fe0, side: THREE.DoubleSide }), roof: new THREE.MeshLambertMaterial({ color: 0x2f7fe0 }),
+    ring: new THREE.MeshBasicMaterial({ color: 0x3d8ef0, transparent: true, opacity: 0.85, side: THREE.DoubleSide }) },
+  op: { cloth: new THREE.MeshLambertMaterial({ color: 0xe0413a, side: THREE.DoubleSide }), roof: new THREE.MeshLambertMaterial({ color: 0xe0413a }),
+    ring: new THREE.MeshBasicMaterial({ color: 0xf0453d, transparent: true, opacity: 0.85, side: THREE.DoubleSide }) }
+};
+const BLACK = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+const GUNMETAL = new THREE.MeshLambertMaterial({ color: 0x55595f });
+
+// omino tiratore con pistola (in cima alle torri)
+function buildShooter(isKing) {
+  const g = new THREE.Group();
+  const T = 0.065, H = isKing ? 1.0 : 0.85;
+  const legL = H * 0.42, torsoL = H * 0.36, armL = H * 0.34;
+  for (const s of [-1, 1]) { const l = limb(legL, T * 0.8, BLACK); l.position.set(s * T * 0.9, legL, 0); g.add(l); }
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(T, T * 1.05, torsoL, 8), BLACK); torso.position.y = legL + torsoL / 2; torso.castShadow = true; g.add(torso);
+  const headR = H * 0.12;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(headR, 12, 10), BLACK); head.position.y = legL + torsoL + headR * 0.95; head.castShadow = true; g.add(head);
+  if (isKing) {
+    const cr = new THREE.Mesh(new THREE.CylinderGeometry(headR * 0.9, headR * 0.8, headR * 0.7, 8, 1, true), M.gold);
+    cr.position.y = head.position.y + headR * 0.95; g.add(cr);
   }
-  // piattaforma del difensore
-  const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.6, 0.2, 14), new THREE.MeshLambertMaterial({ color: 0x8f8270 })); pad.position.y = 3.6; t.add(pad);
-  flag(t, teamMats.cloth, 3.4, 1.4, -1.0, -1.0);
-  return t;
+  const shY = legL + torsoL - H * 0.03;
+  const armR = limb(armL, T * 0.7, BLACK); armR.position.set(T + 0.02, shY, 0); armR.rotation.x = -Math.PI / 2; g.add(armR);
+  const armL2 = limb(armL, T * 0.7, BLACK); armL2.position.set(-T - 0.02, shY, 0); armL2.rotation.x = -1.3; armL2.rotation.z = -0.5; g.add(armL2);
+  // pistola
+  const gun = new THREE.Group(); gun.position.set(0, -armL, 0); armR.add(gun);
+  box(0.06, 0.07, 0.26, GUNMETAL, 0, 0, 0.08, gun, false);            // canna (prosegue il braccio)
+  box(0.05, 0.13, 0.06, BLACK, 0, -0.07, -0.01, gun, false);           // impugnatura
+  const muzzle = new THREE.Object3D(); muzzle.position.set(0, 0, 0.23); gun.add(muzzle);
+  gun.rotation.x = Math.PI / 2;
+  return { g, armR, muzzle, H };
 }
-function kingTower(teamMats) {
-  const t = new THREE.Group();
-  box(3.95, 0.45, 3.95, M.stonePlain, 0, 0.22, 0, t);
-  box(3.5, 2.5, 3.5, M.brick, 0, 1.7, 0, t);
-  box(3.8, 0.22, 3.8, M.stonePlain, 0, 3.02, 0, t);
-  box(3.58, 0.38, 3.58, M.brick, 0, 3.3, 0, t);
-  crenellate(t, 3.58, 3.47, 6);
-  // torretta centrale (ispirata alle torri dei castelli lombardi)
-  box(1.7, 1.6, 1.7, M.brick, 0, 4.3, 0, t);
-  box(1.95, 0.16, 1.95, M.stonePlain, 0, 5.15, 0, t);
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(1.35, 1.5, 4), teamMats.roof); roof.rotation.y = Math.PI / 4; roof.position.y = 6.0; roof.castShadow = true; t.add(roof);
-  // orologio
-  for (const s of [1, -1]) {
-    const cl = new THREE.Mesh(new THREE.CircleGeometry(0.42, 24), M.white); cl.position.set(0, 4.45, s * 0.86); cl.rotation.y = s > 0 ? 0 : Math.PI; t.add(cl);
-    const rim = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 24), M.gold); rim.position.copy(cl.position); rim.position.z += s * 0.005; rim.rotation.y = cl.rotation.y; t.add(rim);
-    box(0.05, 0.3, 0.02, M.dark, 0, 4.55, s * 0.875, t, false);
-    // portone + stendardi
-    box(1.0, 1.3, 0.06, M.dark, 0, 1.1, s * 1.76, t, false);
-    banner(t, teamMats.cloth, 0.95, 1.25, 1.15, 2.85, s * 1.77, s > 0 ? 0 : Math.PI);
-    banner(t, teamMats.cloth, 0.95, 1.25, -1.15, 2.85, s * 1.77, s > 0 ? 0 : Math.PI);
-  }
-  flag(t, teamMats.cloth, 6.65, 1.1);
-  return t;
+function limb(len, rad, mat) {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad * 0.85, len, 8), mat);
+  m.position.y = -len / 2; m.castShadow = true; g.add(m);
+  return g;
 }
 
-// lato "host" in basso (ty piccoli) e "guest" in alto nelle coordinate di partita
-const TOWERS = [
-  { id: 'hK', side: 'host', kind: 'king', tx: 9, ty: 3, size: 4 },
-  { id: 'hL', side: 'host', kind: 'princess', tx: 3.5, ty: 6.5, size: 3 },
-  { id: 'hR', side: 'host', kind: 'princess', tx: 14.5, ty: 6.5, size: 3 },
-  { id: 'gK', side: 'guest', kind: 'king', tx: 9, ty: 29, size: 4 },
-  { id: 'gL', side: 'guest', kind: 'princess', tx: 14.5, ty: 25.5, size: 3 },
-  { id: 'gR', side: 'guest', kind: 'princess', tx: 3.5, ty: 25.5, size: 3 }
-];
-const teamMat = { me: makeTeamMats(), op: makeTeamMats() };
-teamMat.op.cloth.color.set(0xe0413a); teamMat.op.roof.color.set(0xe0413a);
+function princessTower(mats) {
+  const t = new THREE.Group();
+  box(2.4, 0.3, 2.4, M.stonePlain, 0, 0.15, 0, t);
+  box(2.0, 1.7, 2.0, M.brick, 0, 1.15, 0, t);
+  box(2.2, 0.16, 2.2, M.stonePlain, 0, 2.06, 0, t);
+  box(2.06, 0.28, 2.06, M.brick, 0, 2.28, 0, t);
+  crenellate(t, 2.06, 2.42, 3);
+  for (const s of [1, -1]) {
+    box(0.32, 0.55, 0.05, M.dark, 0, 1.4, s * 1.01, t, false);
+    banner(t, mats.cloth, 0.6, 0.7, 0.62 * s, 1.95, s * 1.02, s > 0 ? 0 : Math.PI);
+    banner(t, mats.cloth, 0.6, 0.7, -0.62 * s, 1.95, s * 1.02, s > 0 ? 0 : Math.PI);
+  }
+  flag(t, mats.cloth, 2.4, 1.1, -0.8, -0.8);
+  return { g: t, top: 2.42 };
+}
+function kingTower(mats) {
+  const t = new THREE.Group();
+  box(3.2, 0.35, 3.2, M.stonePlain, 0, 0.17, 0, t);
+  box(2.8, 1.8, 2.8, M.brick, 0, 1.25, 0, t);
+  box(3.05, 0.18, 3.05, M.stonePlain, 0, 2.24, 0, t);
+  box(2.86, 0.3, 2.86, M.brick, 0, 2.48, 0, t);
+  crenellate(t, 2.86, 2.63, 5);
+  // 4 torrette d'angolo con tetto colorato
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.9, 10), M.brick);
+    p.position.set(sx * 1.3, 2.9, sz * 1.3); p.castShadow = true; t.add(p);
+    const r = new THREE.Mesh(new THREE.ConeGeometry(0.36, 0.55, 10), mats.roof); r.position.set(sx * 1.3, 3.62, sz * 1.3); r.castShadow = true; t.add(r);
+  }
+  for (const s of [1, -1]) {
+    const cl = new THREE.Mesh(new THREE.CircleGeometry(0.34, 24), M.white); cl.position.set(0, 1.55, s * 1.41); cl.rotation.y = s > 0 ? 0 : Math.PI; t.add(cl);
+    const rim = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.41, 24), M.gold); rim.position.copy(cl.position); rim.position.z += s * 0.005; rim.rotation.y = cl.rotation.y; t.add(rim);
+    box(0.04, 0.24, 0.02, M.dark, 0, 1.63, s * 1.425, t, false);
+    box(0.8, 0.9, 0.05, M.dark, 0, 0.75, s * 1.41, t, false);
+    banner(t, mats.cloth, 0.7, 0.85, 0.95, 2.15, s * 1.42, s > 0 ? 0 : Math.PI);
+    banner(t, mats.cloth, 0.7, 0.85, -0.95, 2.15, s * 1.42, s > 0 ? 0 : Math.PI);
+  }
+  flag(t, mats.cloth, 3.85, 0.9, 1.3, 1.3);
+  return { g: t, top: 2.63 };
+}
+function rubble() {
+  const g = new THREE.Group();
+  for (let i = 0; i < 14; i++) {
+    const s = 0.25 + Math.random() * 0.45;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(s, s * 0.6, s * 0.8), Math.random() < 0.7 ? M.brick : M.rubble);
+    m.position.set((Math.random() - .5) * 2.2, s * 0.3, (Math.random() - .5) * 2.2);
+    m.rotation.set(Math.random(), Math.random() * 3, Math.random());
+    m.castShadow = true; g.add(m);
+  }
+  return g;
+}
+
 const towerGroup = new THREE.Group(); scene.add(towerGroup);
-
-// stato condiviso della partita
-const S = {
-  mode: 'none',        // none | solo | online
-  role: 'host',        // host | guest  (guest vede l'arena ruotata)
-  phase: 'idle',       // idle | wait | count | battle | end
-  clock: 0,            // ms dall'inizio battaglia (negativo durante il conto alla rovescia)
-  elixir: CFG.ELIXIR_START,
-  towers: {},          // id -> {hp, max}
-  crowns: { host: 0, guest: 0 },
-  nick: 'Giocatore', opNick: 'Avversario',
-  code: null
-};
-
-// la vista: ognuno vede il proprio lato in basso
-const viewXZ = (tx, ty) => {
-  const w = T2W(tx, ty);
-  return S.role === 'guest' ? { x: -w.x, z: -w.z } : w;
-};
-const towerMeshes = {};
+const towerObjs = []; // per indice: { g, shooter, top, rubble }
 function buildTowers() {
   while (towerGroup.children.length) towerGroup.remove(towerGroup.children[0]);
-  flags.length = 0;
-  for (const T of TOWERS) {
-    const mine = T.side === S.role;
+  flags.length = 0; towerObjs.length = 0;
+  SIM.TOWERS.forEach((T, i) => {
+    const mine = T.team === myTeam();
     const mats = mine ? teamMat.me : teamMat.op;
-    const m = T.kind === 'king' ? kingTower(mats) : princessTower(mats);
-    const p = viewXZ(T.tx, T.ty);
-    m.position.set(p.x, 0, p.z);
-    m.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    towerGroup.add(m);
-    towerMeshes[T.id] = m;
-  }
-  // il vento muove le bandiere sempre nello stesso verso
+    const tw = T.kind === 'king' ? kingTower(mats) : princessTower(mats);
+    const p = viewXZ(T.x, T.y);
+    const holder = new THREE.Group(); holder.position.set(p.x, 0, p.z); towerGroup.add(holder);
+    holder.add(tw.g);
+    tw.g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    const sh = buildShooter(T.kind === 'king');
+    sh.g.position.y = tw.top; sh.g.scale.setScalar(1.25);
+    sh.g.rotation.y = mine ? Math.PI : 0;   // guarda verso il nemico
+    holder.add(sh.g);
+    const obj = { holder, tower: tw.g, shooter: sh, top: tw.top, rubble: null, recoil: 0, aimYaw: sh.g.rotation.y };
+    towerObjs[i] = obj;
+    if (!S.towersAlive[i]) setTowerDestroyed(i, true);
+  });
   buildLabels();
 }
+function setTowerDestroyed(i, silent) {
+  const o = towerObjs[i]; if (!o || o.rubble) return;
+  o.tower.visible = false; o.shooter.g.visible = false;
+  o.rubble = rubble(); o.holder.add(o.rubble);
+  if (!silent) {
+    const p = o.holder.position;
+    for (let k = 0; k < 26; k++) particle(p.x, 1 + Math.random() * 1.5, p.z, 0x9b8b7a, 3.5, 0.9, 0.12 + Math.random() * 0.12);
+    playBoom(0.9);
+    shake = 0.35;
+  }
+}
 
-// ---- etichette HP sopra le torri -----------------------------------------
+// ---- etichette vita torri ----
 const labelsEl = $('labels');
-const labelEls = {};
+const towerLabels = [];
 function buildLabels() {
-  labelsEl.innerHTML = '';
-  for (const T of TOWERS) {
-    const mine = T.side === S.role;
+  labelsEl.querySelectorAll('.tl,.bubble').forEach(e => e.remove());
+  SIM.TOWERS.forEach((T, i) => {
+    const mine = T.team === myTeam();
     const d = document.createElement('div');
     d.className = 'tl ' + (T.kind === 'king' ? 'king ' : '') + (mine ? 'me' : 'op');
     d.innerHTML = (T.kind === 'king' ? '<div class="who font-g stroke"></div>' : '') + '<div class="hpn stroke"></div><div class="bar"><i></i></div>';
     labelsEl.appendChild(d);
-    labelEls[T.id] = d;
-  }
-  // bolle emote
+    towerLabels[i] = d;
+  });
   for (const k of ['me', 'op']) { const b = document.createElement('div'); b.className = 'bubble'; b.id = 'bub_' + k; labelsEl.appendChild(b); }
-  refreshLabels();
+  refreshTowerLabels();
 }
-function refreshLabels() {
-  for (const T of TOWERS) {
-    const el = labelEls[T.id]; if (!el) continue;
-    const st = S.towers[T.id] || { hp: T.kind === 'king' ? CFG.KING_HP : CFG.PRINCESS_HP, max: T.kind === 'king' ? CFG.KING_HP : CFG.PRINCESS_HP };
-    el.querySelector('.hpn').textContent = st.hp;
-    el.querySelector('.bar i').style.width = (100 * st.hp / st.max) + '%';
+function refreshTowerLabels() {
+  SIM.TOWERS.forEach((T, i) => {
+    const el = towerLabels[i]; if (!el) return;
+    const max = SIM.TOWER_STATS[T.kind].hp, hp = S.towersHp[i];
+    el.classList.toggle('dead', !S.towersAlive[i]);
+    el.querySelector('.hpn').textContent = hp;
+    el.querySelector('.bar i').style.width = (100 * hp / max) + '%';
     const who = el.querySelector('.who');
-    if (who) who.textContent = T.side === S.role ? S.nick : S.opNick;
-  }
+    if (who) who.textContent = T.team === myTeam() ? S.nick : S.opNick;
+  });
 }
-const _v = new THREE.Vector3();
-function placeLabels() {
-  const r = gameEl.getBoundingClientRect();
-  for (const T of TOWERS) {
-    const el = labelEls[T.id]; if (!el) continue;
-    const p = viewXZ(T.tx, T.ty);
-    _v.set(p.x, T.kind === 'king' ? 7.6 : 4.9, p.z).project(camera);
-    el.style.left = ((_v.x + 1) / 2 * r.width) + 'px';
-    el.style.top = ((1 - _v.y) / 2 * r.height) + 'px';
-  }
-  for (const k of ['me', 'op']) {
-    const b = $('bub_' + k); if (!b) continue;
-    const kingId = (k === 'me') === (S.role === 'host') ? 'hK' : 'gK';
-    const T = TOWERS.find(t => t.id === kingId); const p = viewXZ(T.tx, T.ty);
-    _v.set(p.x + (k === 'me' ? -3.6 : 3.6), k === 'me' ? 5.2 : 6.5, p.z).project(camera);
-    b.style.left = ((_v.x + 1) / 2 * r.width) + 'px';
-    b.style.top = ((1 - _v.y) / 2 * r.height) + 'px';
-  }
-}
-
-// ---- griglia di debug (18x32) ---------------------------------------------
-const grid = new THREE.Group(); grid.visible = false; scene.add(grid);
-{
-  const mat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 });
-  const pts = [];
-  for (let x = 0; x <= CFG.W; x++) { pts.push(x - 9, 0.03, -16, x - 9, 0.03, 16); }
-  for (let y = 0; y <= CFG.H; y++) { pts.push(-9, 0.03, 16 - y, 9, 0.03, 16 - y); }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-  grid.add(new THREE.LineSegments(g, mat));
-}
-
-// ---- camera / resize ------------------------------------------------------
-function resize() {
-  const r = gameEl.getBoundingClientRect();
-  renderer.setSize(r.width, r.height, false);
-  camera.aspect = r.width / r.height;
-  fitCamera(r);
-}
-// inquadratura stile CR: vista dall'alto inclinata; cerca distanza e centro
-// perché tutta l'arena (18x32) entri nell'area sopra il vassoio delle carte
-const FIT_PTS = [];
-for (const x of [-9.4, 9.4]) for (const z of [-16.4, 16.4]) FIT_PTS.push(new THREE.Vector3(x, 0, z));
-FIT_PTS.push(new THREE.Vector3(0, 7.2, -13), new THREE.Vector3(-5.5, 4.4, -9.5), new THREE.Vector3(5.5, 4.4, -9.5));
-function fitCamera(r) {
-  const pitch = 57 * Math.PI / 180;
-  camera.fov = 36;
-  camera.updateProjectionMatrix();
-  const tray = $('tray').getBoundingClientRect().height || r.height * 0.24;
-  const yBot = -1 + 2 * (tray + 6) / r.height;       // NDC sopra il vassoio
-  const yTop = 1 - 2 * 64 / r.height;               // spazio per l'HUD in alto (e lo sfondo della piazza)
-  const place = (d, tz) => {
-    camera.position.set(0, d * Math.sin(pitch), tz + d * Math.cos(pitch));
-    camera.lookAt(0, 0, tz); camera.updateMatrixWorld();
-  };
-  const ext = () => {
-    let mnY = 9, mxY = -9, mxX = 0;
-    for (const p of FIT_PTS) { _v.copy(p).project(camera); mnY = Math.min(mnY, _v.y); mxY = Math.max(mxY, _v.y); mxX = Math.max(mxX, Math.abs(_v.x)); }
-    return { mnY, mxY, mxX };
-  };
-  let lo = 15, hi = 160, tz = 0;
-  for (let it = 0; it < 26; it++) {
-    const d = (lo + hi) / 2;
-    for (let k = 0; k < 10; k++) {          // centra verticalmente
-      place(d, tz); const e = ext();
-      const want = (yBot + yTop) / 2, mid = (e.mnY + e.mxY) / 2;
-      tz -= (mid - want) * d * 0.35;
-    }
-    place(d, tz); const e = ext();
-    const fits = e.mxX <= 1.0 && (e.mxY - e.mnY) <= (yTop - yBot);
-    if (fits) hi = d; else lo = d;
-  }
-  place(hi, tz);
-}
-window.addEventListener('resize', resize);
 
 // =====================================================================
-//  INTERFACCIA
+//  TRUPPE: omini neri stilizzati (più spessi = più vita, più sottili = veloci)
+// =====================================================================
+function thickness(c) {
+  const lh = Math.log(c.hp + (c.shield || 0));
+  const t = 0.035 + (lh - Math.log(60)) / (Math.log(3300) - Math.log(60)) * 0.13;
+  const sp = { lenta: 1.15, media: 1, rapida: 0.88, molto_rapida: 0.76 }[c.speed] || 1;
+  return clamp(t * sp, 0.03, 0.19);
+}
+const WM = {
+  steel: new THREE.MeshLambertMaterial({ color: 0xc9d1db }),
+  gold: new THREE.MeshLambertMaterial({ color: 0xf2c341 }),
+  wood: new THREE.MeshLambertMaterial({ color: 0x8a5a33 }),
+  darkwood: new THREE.MeshLambertMaterial({ color: 0x5e3b1e }),
+  lanceW: new THREE.MeshLambertMaterial({ color: 0xf2f2f2 }),
+  lanceB: new THREE.MeshLambertMaterial({ color: 0x3f7fd6 }),
+  gun: new THREE.MeshLambertMaterial({ color: 0x45484d }),
+  fire: new THREE.MeshBasicMaterial({ color: 0xff8a1f }),
+  ice: new THREE.MeshBasicMaterial({ color: 0x9fe6ff }),
+  wing: new THREE.MeshLambertMaterial({ color: 0x3b2f55, side: THREE.DoubleSide }),
+  horse: new THREE.MeshLambertMaterial({ color: 0x3b2e25 }),
+  pig: new THREE.MeshLambertMaterial({ color: 0x7a5252 }),
+  pink: new THREE.MeshLambertMaterial({ color: 0xd98a8a }),
+  coil: new THREE.MeshLambertMaterial({ color: 0xd9a520, emissive: 0x000000 })
+};
+function cyl(r1, r2, len, mat, segs = 8) { const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, len, segs), mat); m.castShadow = true; return m; }
+function sph(r, mat) { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), mat); m.castShadow = true; return m; }
+// oggetto lungo l'asse z (in avanti) partendo dalla mano
+function alongZ(mesh, len, offset = 0) { mesh.rotation.x = Math.PI / 2; mesh.position.z = len / 2 + offset; return mesh; }
+
+function weaponR(kind, H) {
+  const g = new THREE.Group();
+  switch (kind) {
+    case 'lance': {
+      g.add(alongZ(cyl(0.045, 0.045, 0.5, WM.lanceB), 0.5, -0.15));
+      g.add(alongZ(cyl(0.015, 0.09, 1.3, WM.lanceW), 1.3, 0.35));
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.25, 8), WM.steel); tip.rotation.x = Math.PI / 2; tip.position.z = 1.75; g.add(tip);
+      break;
+    }
+    case 'spear': case 'spearshield': {
+      g.add(alongZ(cyl(0.02, 0.02, H * 0.95, WM.wood), H * 0.95, -0.2));
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.16, 6), WM.steel); tip.rotation.x = Math.PI / 2; tip.position.z = H * 0.95 - 0.2 + 0.08; g.add(tip);
+      break;
+    }
+    case 'sword': case 'twoswords': {
+      const bl = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, H * 0.6), kind === 'sword' ? WM.gold : WM.steel); bl.position.z = H * 0.32; bl.castShadow = true; g.add(bl);
+      const gd = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.04, 0.04), WM.gold); gd.position.z = 0.03; g.add(gd);
+      break;
+    }
+    case 'dagger': { const bl = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.015, 0.22), WM.steel); bl.position.z = 0.12; g.add(bl); break; }
+    case 'shotgun': {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.35), WM.darkwood); b.position.z = 0.02; g.add(b);
+      g.add(alongZ(cyl(0.05, 0.05, 0.55, WM.gun), 0.55, 0.15));
+      break;
+    }
+    case 'hammer': {
+      g.add(alongZ(cyl(0.025, 0.025, 0.55, WM.wood), 0.55, -0.05));
+      const hd = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.16, 0.16), WM.steel); hd.position.z = 0.5; hd.castShadow = true; g.add(hd);
+      break;
+    }
+    case 'mace': {
+      g.add(alongZ(cyl(0.025, 0.025, 0.45, WM.wood), 0.45, -0.05));
+      const hd = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 0), WM.steel); hd.position.z = 0.45; hd.castShadow = true; g.add(hd);
+      break;
+    }
+    case 'fire': { const s = sph(0.11, WM.fire); s.position.z = 0.05; g.add(s); break; }
+    case 'ice': { const s = sph(0.11, WM.ice); s.position.z = 0.05; g.add(s); break; }
+    case 'fists': { const s = sph(0.12, BLACK); g.add(s); break; }
+  }
+  return g;
+}
+
+function buildMount(kind) {
+  const g = new THREE.Group();
+  const mat = kind === 'pig' ? WM.pig : WM.horse;
+  const legs = [];
+  if (kind === 'horse') {
+    const bd = cyl(0.2, 0.2, 0.95, mat, 10); bd.rotation.x = Math.PI / 2; bd.position.y = 0.62; g.add(bd);
+    for (const sx of [-0.13, 0.13]) for (const sz of [-0.35, 0.35]) { const l = limb(0.5, 0.045, mat); l.position.set(sx, 0.55, sz); g.add(l); legs.push(l); }
+    const nk = cyl(0.09, 0.11, 0.5, mat); nk.position.set(0, 0.9, 0.5); nk.rotation.x = 0.6; g.add(nk);
+    const hd = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.36), mat); hd.position.set(0, 1.08, 0.72); hd.castShadow = true; g.add(hd);
+    const tl = cyl(0.03, 0.05, 0.45, BLACK); tl.position.set(0, 0.55, -0.55); tl.rotation.x = -0.5; g.add(tl);
+    return { g, legs, saddle: 0.8 };
+  }
+  const bd = cyl(0.26, 0.24, 0.75, mat, 10); bd.rotation.x = Math.PI / 2; bd.position.y = 0.45; g.add(bd);
+  for (const sx of [-0.15, 0.15]) for (const sz of [-0.25, 0.25]) { const l = limb(0.3, 0.05, mat); l.position.set(sx, 0.32, sz); g.add(l); legs.push(l); }
+  const hd = sph(0.2, mat); hd.position.set(0, 0.52, 0.45); g.add(hd);
+  const sn = cyl(0.08, 0.08, 0.1, WM.pink); sn.rotation.x = Math.PI / 2; sn.position.set(0, 0.48, 0.66); g.add(sn);
+  for (const s of [-1, 1]) { const tk = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.14, 6), WM.lanceW); tk.position.set(s * 0.1, 0.42, 0.62); tk.rotation.x = -0.6; g.add(tk); }
+  return { g, legs, saddle: 0.68 };
+}
+
+function buildSparky(body, ent) {
+  const ch = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.4, 1.15), BLACK); ch.position.y = 0.45; ch.castShadow = true; body.add(ch);
+  for (const sx of [-0.52, 0.52]) for (const sz of [-0.38, 0.38]) {
+    const w = cyl(0.22, 0.22, 0.12, WM.darkwood, 14); w.rotation.z = Math.PI / 2; w.position.set(sx, 0.22, sz); body.add(w);
+  }
+  const coil = new THREE.Group(); coil.position.set(0, 0.95, 0.05); coil.rotation.x = -0.25; body.add(coil);
+  const core = cyl(0.12, 0.12, 0.9, BLACK, 10); core.rotation.x = Math.PI / 2; core.position.z = 0.25; coil.add(core);
+  const coilMat = WM.coil.clone();
+  for (let i = 0; i < 4; i++) {
+    const r = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.045, 8, 18), coilMat); r.position.z = 0.0 + i * 0.18; r.castShadow = true; coil.add(r);
+  }
+  ent.coilMat = coilMat;
+  ent.muzzleY = 0.95;
+}
+
+const VIS = 1.35;   // gli omini sono disegnati un po' più grandi della loro area di gioco, per vederli bene
+function buildFigure(c, mine) {
+  const root = new THREE.Group();
+  const sz = SIM.SIZE[c.size];
+  const H = sz.h * 1.2;
+  const T = thickness(c);
+  const ent = { root, H, parts: {}, muzzleY: H * 0.7 };
+  const ringMat = (mine ? teamMat.me : teamMat.op).ring.clone();
+  const ring = new THREE.Mesh(new THREE.RingGeometry(sz.r * 0.85, sz.r * 1.12, 24), ringMat);
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; root.add(ring);
+  ent.ringMat = ringMat; ent.ring = ring;
+  const body = new THREE.Group(); root.add(body); ent.parts.body = body;
+  const inner = new THREE.Group(); inner.scale.setScalar(VIS); body.add(inner);
+  if (c.machine) { buildSparky(inner, ent); ent.top = 1.4 * VIS; ent.muzzleY *= VIS; return ent; }
+  let baseY = 0;
+  if (c.mount) { const mt = buildMount(c.mount); inner.add(mt.g); ent.parts.mount = mt; baseY = mt.saddle; }
+  const rider = new THREE.Group(); rider.position.y = baseY; inner.add(rider); ent.parts.rider = rider;
+  const legL = H * 0.42, torsoL = H * 0.36, armL = H * 0.34, headR = Math.max(H * 0.11, T * 1.25);
+  const hipY = c.mount ? 0.05 : legL;
+  if (!c.mount) {
+    ent.parts.legL = limb(legL, T * 0.8, BLACK); ent.parts.legL.position.set(-T * 0.9, hipY, 0); rider.add(ent.parts.legL);
+    ent.parts.legR = limb(legL, T * 0.8, BLACK); ent.parts.legR.position.set(T * 0.9, hipY, 0); rider.add(ent.parts.legR);
+  } else {
+    for (const s of [-1, 1]) { const l = limb(legL * 0.55, T * 0.75, BLACK); l.position.set(s * (T + 0.08), hipY + 0.02, 0); l.rotation.z = s * 0.9; rider.add(l); }
+  }
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(T, T * 1.05, torsoL, 8), BLACK);
+  torso.position.y = hipY + torsoL / 2; torso.castShadow = true; rider.add(torso);
+  const neckY = hipY + torsoL;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(headR, 12, 10), BLACK); head.position.y = neckY + headR * 0.95; head.castShadow = true; rider.add(head);
+  const shY = neckY - H * 0.03;
+  const armR = limb(armL, T * 0.7, BLACK); armR.position.set(T + 0.02, shY, 0); rider.add(armR);
+  const armL2 = limb(armL, T * 0.7, BLACK); armL2.position.set(-T - 0.02, shY, 0); rider.add(armL2);
+  ent.parts.armR = armR; ent.parts.armL = armL2;
+  // posa delle braccia secondo l'arma
+  const w = c.weapon;
+  let restR = { x: -0.5, z: 0.25 }, restL = { x: -0.2, z: -0.25 };
+  if (['lance', 'shotgun', 'spear', 'spearshield'].includes(w)) restR = { x: -1.35, z: 0.1 };
+  if (w === 'bow') { restR = { x: -1.3, z: 0.35 }; restL = { x: -1.45, z: -0.1 }; }
+  if (w === 'barrel') { restR = { x: -2.9, z: 0.25 }; restL = { x: -2.9, z: -0.25 }; }
+  if (w === 'cannon') { restR = { x: -2.6, z: 0.2 }; }
+  if (w === 'fire' || w === 'ice') restR = { x: -1.1, z: 0.3 };
+  if (w === 'twoswords') restL = { x: -0.5, z: -0.25 };
+  if (w === 'mace') restL = { x: -1.0, z: -0.3 };
+  ent.restR = restR; ent.restL = restL;
+  // armi
+  const hand = (arm) => { const h = new THREE.Group(); h.position.y = -armL; arm.add(h); return h; };
+  const hr = hand(armR), hl = hand(armL2);
+  if (['lance', 'spear', 'spearshield', 'sword', 'twoswords', 'dagger', 'shotgun', 'hammer', 'mace', 'fire', 'ice', 'fists'].includes(w)) {
+    const wr = weaponR(w, H); wr.rotation.x = 0; hr.add(wr);
+    // lance, lance corte e fucile proseguono il braccio teso in avanti
+    if (['lance', 'shotgun', 'spear', 'spearshield'].includes(w)) wr.rotation.x = Math.PI / 2 + 0.2;
+  }
+  if (w === 'twoswords') { const wl = weaponR('sword', H); wl.rotation.x = 0; wl.children[0].material = WM.steel; hl.add(wl); }
+  if (w === 'fists') hl.add(sph(0.12, BLACK));
+  if (w === 'spearshield' || w === 'mace') {
+    const sh = new THREE.Mesh(new THREE.BoxGeometry(0.06, H * 0.42, H * 0.32), w === 'mace' ? WM.gun : WM.wood);
+    sh.position.set(-0.05, 0.05, 0.08); sh.castShadow = true; hl.add(sh);
+  }
+  if (w === 'bow') {
+    const bow = new THREE.Mesh(new THREE.TorusGeometry(H * 0.28, 0.022, 6, 16, Math.PI), WM.wood);
+    bow.rotation.set(0, Math.PI / 2, Math.PI / 2); hl.add(bow);
+    const str = cyl(0.006, 0.006, H * 0.56, WM.lanceW, 4); hl.add(str);
+  }
+  if (w === 'barrel') {
+    const b = cyl(0.17, 0.17, 0.42, WM.wood, 12); b.rotation.z = Math.PI / 2; b.position.y = neckY + headR * 2 + 0.3; rider.add(b);
+    for (const s of [-0.13, 0.13]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.172, 0.018, 6, 16), WM.steel); r.rotation.y = Math.PI / 2; r.position.set(s, b.position.y, 0); rider.add(r); }
+  }
+  if (w === 'cannon') {
+    const cn = cyl(0.13, 0.15, 0.9, WM.gun, 12); cn.rotation.x = Math.PI / 2; cn.position.set(T + 0.12, shY + 0.12, 0.15); rider.add(cn);
+  }
+  if (c.flying) {
+    for (const s of [-1, 1]) {
+      const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(s * 0.55, 0.25); sh.lineTo(s * 0.45, -0.1); sh.lineTo(s * 0.2, -0.15); sh.lineTo(0, 0);
+      const wg = new THREE.Mesh(new THREE.ShapeGeometry(sh), WM.wing); wg.position.set(0, shY - 0.02, -T - 0.02); rider.add(wg);
+      ent.parts['wing' + s] = wg;
+    }
+  }
+  if (w === 'sword' && c.champion) {   // un tocco d'oro per Coto
+    const band = new THREE.Mesh(new THREE.TorusGeometry(headR * 1.02, headR * 0.18, 6, 16), WM.gold);
+    band.rotation.x = Math.PI / 2; band.position.y = head.position.y + headR * 0.35; rider.add(band);
+  }
+  ent.top = (baseY + neckY + headR * 2 + (w === 'barrel' ? 0.5 : 0)) * VIS;
+  ent.muzzleY = (baseY + shY) * VIS;
+  return ent;
+}
+
+const unitGroup = new THREE.Group(); scene.add(unitGroup);
+const ents = new Map();   // id -> entità visiva
+function createEnt(arr, now) {
+  const [id, ci, team] = arr;
+  const c = CARDS[ci];
+  const mine = team === myTeam();
+  const e = buildFigure(c, mine);
+  Object.assign(e, { id, ci, c, team, mine, from: { x: arr[3] / 100, y: arr[4] / 100 }, to: { x: arr[3] / 100, y: arr[4] / 100 },
+    t0: now, t1: now, hp: arr[5], sh: arr[6], flags: arr[7], tgt: arr[8], spark: arr[9], walk: Math.random() * 6, atkT: 0, born: now,
+    dead: 0, yaw: mine ? Math.PI : 0, px: null, pz: null, charging: false });
+  unitGroup.add(e.root);
+  // barra vita
+  const bw = { S: 26, M: 34, L: 40, XL: 48 }[c.size];
+  const d = document.createElement('div');
+  d.className = 'ub ' + (mine ? 'me' : 'op');
+  d.innerHTML = (c.shield ? `<div class="b" style="width:${bw}px"><i class="shd"></i></div>` : '') + `<div class="b" style="width:${bw}px"><i class="hp"></i></div>`;
+  labelsEl.appendChild(d);
+  e.bar = d; e.hpEl = d.querySelector('.hp'); e.shEl = d.querySelector('.shd');
+  ents.set(id, e);
+  dust(e, 0.6);
+  return e;
+}
+function entPos(e, now) {
+  const k = e.t1 > e.t0 ? clamp((now - e.t0) / (e.t1 - e.t0), 0, 1) : 1;
+  return { x: e.from.x + (e.to.x - e.from.x) * k, y: e.from.y + (e.to.y - e.from.y) * k };
+}
+function killEnt(e, now) {
+  if (e.dead) return;
+  e.dead = now;
+  const w = e.root.position;
+  for (let k = 0; k < 10; k++) particle(w.x, 0.4 + Math.random() * 0.6, w.z, 0x6b6b6b, 1.6, 0.5, 0.08 + Math.random() * 0.06);
+  if (e.bar) { e.bar.remove(); e.bar = null; }
+}
+function removeEnt(e) { unitGroup.remove(e.root); if (e.bar) e.bar.remove(); ents.delete(e.id); }
+
+function applyUnits(list) {
+  const now = performance.now();
+  const seen = new Set();
+  for (const a of list) {
+    seen.add(a[0]);
+    let e = ents.get(a[0]);
+    if (!e) { e = createEnt(a, now); continue; }
+    if (e.dead) continue;
+    const cur = entPos(e, now);
+    e.from = cur; e.to = { x: a[3] / 100, y: a[4] / 100 }; e.t0 = now; e.t1 = now + (S.mode === 'solo' ? 105 : 115);
+    if (a[5] < e.hp) e.hitT = now;
+    e.hp = a[5]; e.sh = a[6]; e.flags = a[7]; e.tgt = a[8]; e.spark = a[9];
+  }
+  for (const e of ents.values()) if (!seen.has(e.id) && !e.dead) killEnt(e, now);
+}
+function codePos(code, now) {
+  if (code < 0) {
+    const T = SIM.TOWERS[-code - 1];
+    return { x: T.x, y: T.y, h: 1.6, tower: -code - 1 };
+  }
+  const e = ents.get(code);
+  if (!e || e.dead) return null;
+  const p = entPos(e, now);
+  return { x: p.x, y: p.y, h: e.c.flying ? 2.1 : (e.H * 0.55 + (e.c.mount ? 0.6 : 0)) * VIS, ent: e };
+}
+
+function updateEnts(now, dt) {
+  for (const e of ents.values()) {
+    if (e.dead) {
+      const k = (now - e.dead) / 350;
+      if (k >= 1) { removeEnt(e); continue; }
+      e.root.scale.set(1 - k * 0.6, Math.max(0.05, 1 - k), 1 - k * 0.6);
+      continue;
+    }
+    const p = entPos(e, now);
+    const w = viewXZ(p.x, p.y);
+    let moved = 0;
+    if (e.px !== null) moved = Math.hypot(w.x - e.px, w.z - e.pz);
+    const deploying = e.flags & 1, attacking = e.flags & 2;
+    // direzione
+    let tyaw = null;
+    if (attacking && e.tgt) {
+      const tp = codePos(e.tgt, now);
+      if (tp) { const tw = viewXZ(tp.x, tp.y); tyaw = Math.atan2(tw.x - w.x, tw.z - w.z); }
+    } else if (moved > 0.002 && e.px !== null) tyaw = Math.atan2(w.x - e.px, w.z - e.pz);
+    if (tyaw !== null) {
+      let d = tyaw - e.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+      e.yaw += d * Math.min(1, dt * 12);
+    }
+    e.px = w.x; e.pz = w.z;
+    e.root.position.set(w.x, 0, w.z);
+    e.root.rotation.y = e.yaw;
+    // comparsa: cade dall'alto
+    const age = (now - e.born) / 1000;
+    let lift = 0;
+    if (age < 0.25) lift = (1 - age / 0.25) * 2.2;
+    // volo
+    if (e.c.flying) lift += 1.4 + Math.sin(now / 220 + e.id) * 0.12;
+    // salto del fiume (cinghiale)
+    if (e.c.jump && p.y > CFG.RIVER_Y0 - 0.3 && p.y < CFG.RIVER_Y1 + 0.3) {
+      const k = (p.y - (CFG.RIVER_Y0 - 0.3)) / (CFG.RIVER_Y1 - CFG.RIVER_Y0 + 0.6);
+      lift += Math.sin(k * Math.PI) * 0.9;
+    }
+    e.parts.body.position.y = lift;
+    e.ring.visible = !e.c.flying || true;
+    // camminata
+    if (moved > 0.0005) e.walk += moved * 9;
+    const sw = moved > 0.0005 ? Math.sin(e.walk) : 0;
+    if (e.parts.legL) { e.parts.legL.rotation.x = sw * 0.75; e.parts.legR.rotation.x = -sw * 0.75; }
+    if (e.parts.mount) e.parts.mount.legs.forEach((l, i) => { l.rotation.x = Math.sin(e.walk * 1.3 + (i % 2 ? Math.PI : 0) + (i > 1 ? 1 : 0)) * 0.6 * (moved > 0.0005 ? 1 : 0); });
+    if (e.parts['wing-1']) { const f = Math.sin(now / 60 + e.id) * 0.6; e.parts['wing-1'].rotation.y = f; e.parts['wing1'].rotation.y = -f; }
+    // braccia: posa + attacco
+    if (e.parts.armR) {
+      let ax = e.restR.x + (e.restR.x > -0.8 ? -sw * 0.4 : 0), lx = e.restL.x + (e.restL.x > -0.8 ? sw * 0.4 : 0);
+      if (e.atkT > 0) {
+        const k = 1 - e.atkT / 0.35;
+        const ranged = !!e.c.proj || !!e.c.pellets;
+        if (ranged) ax += Math.sin(k * Math.PI) * 0.35;
+        else { ax += -Math.sin(k * Math.PI) * 1.7; if (e.c.weapon === 'twoswords') lx += -Math.sin(((k + 0.5) % 1) * Math.PI) * 1.7; }
+        e.atkT -= dt;
+      }
+      e.parts.armR.rotation.x = ax; e.parts.armR.rotation.z = e.restR.z;
+      e.parts.armL.rotation.x = lx; e.parts.armL.rotation.z = e.restL.z;
+    }
+    // scintilla che si carica
+    if (e.coilMat) { const k = (e.spark || 0) / 100; e.coilMat.emissive.setRGB(0.2 * k, 0.5 * k, 1.0 * k); }
+    // anello: blu chiaro se rallentato, trasparente durante lo schieramento
+    e.ringMat.color.set(e.flags & 8 ? 0x9fe6ff : (e.mine ? 0x3d8ef0 : 0xf0453d));
+    e.ringMat.opacity = deploying ? 0.35 : 0.85;
+    // polvere durante la carica
+    if ((e.flags & 4) && Math.random() < 0.5) particle(w.x + (Math.random() - .5) * 0.5, 0.15, w.z + (Math.random() - .5) * 0.5, 0xb8a48a, 0.6, 0.45, 0.07);
+    // barra vita
+    if (e.bar) {
+      e.hpEl.style.width = clamp(100 * e.hp / e.c.hp, 0, 100) + '%';
+      if (e.shEl) { e.shEl.parentNode.style.display = e.sh > 0 ? '' : 'none'; e.shEl.style.width = clamp(100 * e.sh / e.c.shield, 0, 100) + '%'; }
+      e.bar.classList.toggle('deploy', !!deploying);
+    }
+  }
+}
+
+// =====================================================================
+//  PROIETTILI ED EFFETTI
+// =====================================================================
+const fxGroup = new THREE.Group(); scene.add(fxGroup);
+const FXM = {
+  tracer: new THREE.MeshBasicMaterial({ color: 0xfff3a0 }),
+  flash: new THREE.MeshBasicMaterial({ color: 0xffd25a, transparent: true, opacity: 0.95 }),
+  arrow: new THREE.MeshLambertMaterial({ color: 0x6b4423 }),
+  ball: new THREE.MeshBasicMaterial({ color: 0x7c5cff }),
+  fireball: new THREE.MeshBasicMaterial({ color: 0xff7a1a }),
+  iceball: new THREE.MeshBasicMaterial({ color: 0xaef0ff }),
+  cannon: new THREE.MeshLambertMaterial({ color: 0x222222 }),
+  ring: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
+};
+const particles = [];
+const pGeo = new THREE.SphereGeometry(1, 6, 4);
+const pMats = {};
+function particle(x, y, z, color, spd, life, size) {
+  const mat = pMats[color] || (pMats[color] = new THREE.MeshBasicMaterial({ color }));
+  const m = new THREE.Mesh(pGeo, mat); m.position.set(x, y, z); m.scale.setScalar(size); fxGroup.add(m);
+  const a = Math.random() * Math.PI * 2, u = Math.random();
+  particles.push({ m, vx: Math.cos(a) * spd * (0.4 + u), vy: spd * (0.3 + Math.random() * 0.8), vz: Math.sin(a) * spd * (0.4 + u), life, max: life, s: size });
+}
+function dust(e, n) { const p = e.root.position; for (let k = 0; k < 8 * n; k++) particle(p.x, 0.1, p.z, 0xcbb898, 1.4, 0.45, 0.07 + Math.random() * 0.05); }
+const rings = [];
+function ringFx(x, z, radius, color, life = 0.45) {
+  const mat = FXM.ring.clone(); mat.color.set(color);
+  const m = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 32), mat);
+  m.rotation.x = -Math.PI / 2; m.position.set(x, 0.08, z); fxGroup.add(m);
+  rings.push({ m, life, max: life, r: radius });
+}
+const lines = [];
+function lineFx(points, color, life = 0.12, width = 1) {
+  const g = new THREE.BufferGeometry().setFromPoints(points);
+  const m = new THREE.Line(g, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 1, linewidth: width }));
+  fxGroup.add(m); lines.push({ m, life, max: life });
+}
+const flashes = [];
+function muzzleFlash(pos, size = 0.16) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(size, 8, 6), FXM.flash); m.position.copy(pos); fxGroup.add(m);
+  flashes.push({ m, life: 0.07 });
+  for (let k = 0; k < 3; k++) particle(pos.x, pos.y, pos.z, 0xfff0a0, 2.5, 0.12, 0.03);
+}
+function spark(x, y, z, color = 0xffffff, n = 5) { for (let k = 0; k < n; k++) particle(x, y, z, color, 2.2, 0.22, 0.04 + Math.random() * 0.03); }
+
+const projs = [];
+const _v3 = new THREE.Vector3(), _v3b = new THREE.Vector3();
+function projMesh(kind) {
+  const g = new THREE.Group();
+  switch (kind) {
+    case 'bullet': { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.7, 5), FXM.tracer); m.rotation.x = Math.PI / 2; g.add(m); break; }
+    case 'arrow': case 'spear': {
+      const L = kind === 'spear' ? 0.75 : 0.5;
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, L, 5), FXM.arrow); m.rotation.x = Math.PI / 2; g.add(m);
+      const t = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.12, 5), WM.steel); t.rotation.x = Math.PI / 2; t.position.z = L / 2; g.add(t);
+      break;
+    }
+    case 'firearrows': {
+      for (let i = 0; i < 5; i++) {
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.5, 5), FXM.fireball); m.rotation.x = Math.PI / 2;
+        m.position.set((i - 2) * 0.18, Math.abs(i - 2) * 0.05, -Math.abs(i - 2) * 0.12); g.add(m);
+      }
+      break;
+    }
+    case 'ball': g.add(new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), FXM.ball)); break;
+    case 'fireball': g.add(new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), FXM.fireball)); break;
+    case 'iceball': g.add(new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), FXM.iceball)); break;
+    case 'cannonball': g.add(new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), FXM.cannon)); break;
+    default: g.add(new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), FXM.tracer));
+  }
+  return g;
+}
+function spawnProj(e, now) {
+  // ['pr', kind, from, to, x0, y0, tx, ty, speed]
+  const [, kind, from, to, x0, y0, tx, ty, sp] = e;
+  let start;
+  if (from < 0) {
+    const i = -from - 1, o = towerObjs[i];
+    if (o && o.shooter.g.visible) {
+      // il tiratore si gira, rinculo, lampo e sparo
+      const tp = codePos(to, now) || { x: tx, y: ty };
+      const tw = viewXZ(tp.x, tp.y);
+      o.aimYaw = Math.atan2(tw.x - o.holder.position.x, tw.z - o.holder.position.z);
+      o.shooter.g.rotation.y = o.aimYaw;
+      o.recoil = 0.12;
+      o.shooter.g.updateMatrixWorld(true);
+      o.shooter.muzzle.getWorldPosition(_v3);
+      start = _v3.clone();
+      muzzleFlash(start, SIM.TOWERS[i].kind === 'king' ? 0.2 : 0.15);
+      playShot(SIM.TOWERS[i].kind === 'king' ? 0.55 : 0.45, SIM.TOWERS[i].team === myTeam());
+    } else { const w = viewXZ(x0, y0); start = new THREE.Vector3(w.x, 2.6, w.z); }
+  } else {
+    const src = ents.get(from);
+    if (src && !src.dead) {
+      src.atkT = 0.35;
+      start = src.root.position.clone(); start.y = src.parts.body.position.y + src.muzzleY;
+    } else { const w = viewXZ(x0, y0); start = new THREE.Vector3(w.x, 0.8, w.z); }
+    if (kind === 'cannonball') playShot(0.35, false, 0.5);
+  }
+  const mesh = projMesh(kind); mesh.position.copy(start); fxGroup.add(mesh);
+  const tp = codePos(to, now) || { x: tx, y: ty, h: 0.6 };
+  const dist0 = Math.hypot(tp.x - x0, tp.y - y0);
+  projs.push({ kind, mesh, to, tx: tp.x, ty: tp.y, th: tp.h || 0.6, sp: sp, start: start.clone(), t: 0, dur: Math.max(0.06, dist0 / sp),
+    arc: (kind === 'arrow' || kind === 'firearrows' || kind === 'cannonball' || kind === 'spear') ? Math.min(1.6, dist0 * 0.14) : 0 });
+}
+function updateProjs(now, dt) {
+  for (let i = projs.length - 1; i >= 0; i--) {
+    const p = projs[i];
+    const tp = codePos(p.to, now);
+    if (tp) { p.tx = tp.x; p.ty = tp.y; p.th = tp.h; }
+    p.t += dt;
+    const k = clamp(p.t / p.dur, 0, 1);
+    const tw = viewXZ(p.tx, p.ty);
+    _v3b.set(tw.x, p.th, tw.z);
+    const pos = _v3.copy(p.start).lerp(_v3b, k);
+    pos.y += Math.sin(k * Math.PI) * p.arc;
+    const prev = p.mesh.position.clone();
+    p.mesh.position.copy(pos);
+    if (prev.distanceToSquared(pos) > 1e-6) p.mesh.lookAt(pos.clone().add(pos.clone().sub(prev)));
+    if (k >= 1) {
+      fxGroup.remove(p.mesh); projs.splice(i, 1);
+      const col = { bullet: 0xfff3a0, fireball: 0xff8a1f, iceball: 0xaef0ff, firearrows: 0xff8a1f, ball: 0x9c86ff, cannonball: 0x999999 }[p.kind] || 0xffffff;
+      spark(pos.x, pos.y, pos.z, col, p.kind === 'bullet' ? 4 : 6);
+    }
+  }
+}
+function updateFx(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]; p.life -= dt;
+    if (p.life <= 0) { fxGroup.remove(p.m); particles.splice(i, 1); continue; }
+    p.vy -= 6 * dt;
+    p.m.position.x += p.vx * dt; p.m.position.y = Math.max(0.02, p.m.position.y + p.vy * dt); p.m.position.z += p.vz * dt;
+    p.m.scale.setScalar(p.s * (p.life / p.max));
+  }
+  for (let i = rings.length - 1; i >= 0; i--) {
+    const r = rings[i]; r.life -= dt;
+    if (r.life <= 0) { fxGroup.remove(r.m); rings.splice(i, 1); continue; }
+    const k = 1 - r.life / r.max;
+    r.m.scale.setScalar(0.3 * r.r + k * r.r * 0.7); r.m.material.opacity = 0.75 * (1 - k);
+  }
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const l = lines[i]; l.life -= dt;
+    if (l.life <= 0) { fxGroup.remove(l.m); lines.splice(i, 1); continue; }
+    l.m.material.opacity = l.life / l.max;
+  }
+  for (let i = flashes.length - 1; i >= 0; i--) {
+    const f = flashes[i]; f.life -= dt;
+    if (f.life <= 0) { fxGroup.remove(f.m); flashes.splice(i, 1); continue; }
+    f.m.scale.setScalar(1 + (0.07 - f.life) * 8);
+  }
+  // rinculo dei tiratori
+  for (const o of towerObjs) if (o && o.recoil > 0) {
+    o.recoil -= dt;
+    o.shooter.armR.rotation.x = -Math.PI / 2 - Math.max(0, o.recoil) * 4;
+  }
+}
+
+const floaters = [];
+function floatLabel(text, x, y, mine) {
+  const d = document.createElement('div'); d.className = 'plbl ' + (mine ? 'me' : 'op'); d.textContent = text;
+  labelsEl.appendChild(d); floaters.push({ d, x, y, t: performance.now() });
+}
+
+function handleEvent(e, now) {
+  switch (e[0]) {
+    case 'pr': spawnProj(e, now); break;
+    case 'atk': {
+      const src = ents.get(e[1]); if (src) src.atkT = 0.35;
+      const tp = codePos(e[2], now);
+      if (tp) setTimeout(() => { const w = viewXZ(tp.x, tp.y); spark(w.x, tp.h, w.z, e[3] ? 0xffd25a : 0xffffff, e[3] ? 10 : 5); if (e[3]) ringFx(w.x, w.z, 1.2, 0xffd25a, 0.35); }, 120);
+      break;
+    }
+    case 'pel': {
+      const src = ents.get(e[1]);
+      const ends = e[4];
+      let st;
+      if (src && !src.dead) { src.atkT = 0.35; st = src.root.position.clone(); st.y = src.muzzleY + src.parts.body.position.y; }
+      else { const w = viewXZ(e[2], e[3]); st = new THREE.Vector3(w.x, 0.8, w.z); }
+      muzzleFlash(st, 0.2);
+      for (let k = 0; k < ends.length; k += 2) {
+        const w = viewXZ(ends[k], ends[k + 1]);
+        lineFx([st, new THREE.Vector3(w.x, 0.6 + Math.random() * 0.4, w.z)], 0xfff3a0, 0.13);
+      }
+      playShot(0.6, false, 0.7);
+      break;
+    }
+    case 'zap': {
+      const src = ents.get(e[1]);
+      const w = viewXZ(e[3], e[4]);
+      const st = src ? src.root.position.clone() : new THREE.Vector3(w.x, 1, w.z);
+      st.y = 1.05;
+      const pts = [st.clone()];
+      for (let k = 1; k < 7; k++) {
+        const p = st.clone().lerp(new THREE.Vector3(w.x, 0.6, w.z), k / 7);
+        p.x += (Math.random() - .5) * 0.5; p.y += (Math.random() - .5) * 0.5; p.z += (Math.random() - .5) * 0.5; pts.push(p);
+      }
+      pts.push(new THREE.Vector3(w.x, 0.6, w.z));
+      lineFx(pts, 0x9fe6ff, 0.3); lineFx(pts.map(p => p.clone().add(new THREE.Vector3(0.06, 0.05, 0))), 0xffffff, 0.2);
+      ringFx(w.x, w.z, e[5], 0x9fe6ff, 0.5);
+      for (let k = 0; k < 16; k++) particle(w.x, 0.5, w.z, 0xbff4ff, 3, 0.35, 0.06);
+      playBoom(0.7, true);
+      break;
+    }
+    case 'hit': {
+      const w = viewXZ(e[2], e[3]);
+      const col = { fireball: 0xff8a1f, iceball: 0x9fe6ff, firearrows: 0xff8a1f }[e[1]] || 0xffffff;
+      ringFx(w.x, w.z, e[4], col, 0.4);
+      for (let k = 0; k < 10; k++) particle(w.x, 0.3, w.z, col, 2.5, 0.35, 0.06);
+      if (e[1] === 'fireball') playBoom(0.35);
+      break;
+    }
+    case 'boom': {
+      const w = viewXZ(e[2], e[3]);
+      const col = e[1] === 'ice' ? 0x9fe6ff : 0xff9a3a;
+      ringFx(w.x, w.z, e[4], col, 0.5);
+      for (let k = 0; k < 22; k++) particle(w.x, 0.4, w.z, k % 3 ? col : 0x555555, 3.5, 0.5, 0.08 + Math.random() * 0.06);
+      playBoom(e[1] === 'ice' ? 0.35 : 0.8);
+      break;
+    }
+    case 'die': { const en = ents.get(e[1]); if (en) killEnt(en, now); break; }
+    case 'tw': {
+      const i = e[1];
+      S.towersAlive[i] = false; S.towersHp[i] = 0;
+      setTowerDestroyed(i);
+      refreshTowerLabels(); drawOverlay();
+      const mineT = SIM.TOWERS[i].team === myTeam();
+      showBanner(mineT ? 'Torre persa!' : '+1 CORONA!', '', 1400);
+      break;
+    }
+    case 'kon': { S.towersActive[e[1]] = true; break; }
+    case 'shb': { const en = ents.get(e[1]); if (en) { const p = en.root.position; for (let k = 0; k < 8; k++) particle(p.x, 0.6, p.z, 0x8a5a33, 2, 0.4, 0.06); } break; }
+    case 'dash': {
+      const pts = [];
+      for (let k = 0; k < e[2].length; k += 2) { const w = viewXZ(e[2][k], e[2][k + 1]); pts.push(new THREE.Vector3(w.x, 0.7, w.z)); }
+      lineFx(pts, 0xffd25a, 0.5); lineFx(pts.map(p => p.clone().add(new THREE.Vector3(0, 0.06, 0))), 0xffffff, 0.35);
+      for (const p of pts) spark(p.x, p.y, p.z, 0xffd25a, 6);
+      const en = ents.get(e[1]);
+      if (en) { const last = { x: e[2][e[2].length - 2], y: e[2][e[2].length - 1] }; en.from = last; en.to = last; en.t0 = en.t1 = now; }
+      break;
+    }
+    case 'play': {
+      const c = CARDS[e[2]];
+      floatLabel(c.name, e[3], e[4], e[1] === myTeam());
+      break;
+    }
+  }
+}
+
+// =====================================================================
+//  AUDIO (spari sintetizzati, niente file esterni)
+// =====================================================================
+let AC = null, noiseBuf = null, lastShot = 0, muted = lsGet('pl_mute') === '1';
+$('muteBtn').textContent = muted ? '🔇' : '🔊';
+function audioInit() {
+  if (AC) { if (AC.state === 'suspended') AC.resume().catch(() => {}); return; }
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    noiseBuf = AC.createBuffer(1, AC.sampleRate * 0.5, AC.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  } catch (e) { AC = null; }
+}
+window.addEventListener('pointerdown', audioInit);
+function playShot(vol = 0.45, mineSide = false, pitch = 1) {
+  if (!AC || muted || AC.state !== 'running') return;
+  const now = AC.currentTime;
+  if (now - lastShot < 0.045) return;
+  lastShot = now;
+  const v = vol * (mineSide ? 0.75 : 1);
+  // "crack" secco
+  const n = AC.createBufferSource(); n.buffer = noiseBuf; n.playbackRate.value = (0.9 + Math.random() * 0.2) * pitch;
+  const hp = AC.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900 * pitch;
+  const g = AC.createGain(); g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(v, now + 0.002); g.gain.exponentialRampToValueAtTime(0.0008, now + 0.13);
+  n.connect(hp).connect(g).connect(AC.destination); n.start(now); n.stop(now + 0.18);
+  // corpo / eco
+  const n2 = AC.createBufferSource(); n2.buffer = noiseBuf;
+  const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400 * pitch;
+  const g2 = AC.createGain(); g2.gain.setValueAtTime(v * 0.6, now + 0.004); g2.gain.exponentialRampToValueAtTime(0.0008, now + 0.28);
+  n2.connect(lp).connect(g2).connect(AC.destination); n2.start(now); n2.stop(now + 0.32);
+  // colpo basso
+  const o = AC.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(170 * pitch, now); o.frequency.exponentialRampToValueAtTime(45, now + 0.08);
+  const g3 = AC.createGain(); g3.gain.setValueAtTime(v * 0.9, now); g3.gain.exponentialRampToValueAtTime(0.0008, now + 0.1);
+  o.connect(g3).connect(AC.destination); o.start(now); o.stop(now + 0.12);
+}
+function playBoom(vol = 0.6, electric = false) {
+  if (!AC || muted || AC.state !== 'running') return;
+  const now = AC.currentTime;
+  const n = AC.createBufferSource(); n.buffer = noiseBuf; n.playbackRate.value = electric ? 1.6 : 0.5;
+  const lp = AC.createBiquadFilter(); lp.type = electric ? 'bandpass' : 'lowpass'; lp.frequency.value = electric ? 2500 : 500;
+  const g = AC.createGain(); g.gain.setValueAtTime(vol, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+  n.connect(lp).connect(g).connect(AC.destination); n.start(now); n.stop(now + 0.55);
+}
+$('muteBtn').onclick = (ev) => { ev.stopPropagation(); muted = !muted; lsSet('pl_mute', muted ? '1' : '0'); $('muteBtn').textContent = muted ? '🔇' : '🔊'; audioInit(); };
+
+// =====================================================================
+//  ZONA DI SCHIERAMENTO + ANTEPRIMA
+// =====================================================================
+const ovCanvas = document.createElement('canvas'); ovCanvas.width = 18; ovCanvas.height = 32;
+const ovTex = new THREE.CanvasTexture(ovCanvas); ovTex.magFilter = THREE.NearestFilter; ovTex.minFilter = THREE.NearestFilter;
+const overlay = new THREE.Mesh(new THREE.PlaneGeometry(18, 32), new THREE.MeshBasicMaterial({ map: ovTex, transparent: true, depthWrite: false }));
+overlay.rotation.x = -Math.PI / 2; overlay.position.y = 0.05; overlay.visible = false; scene.add(overlay);
+function drawOverlay() {
+  const g = ovCanvas.getContext('2d');
+  g.clearRect(0, 0, 18, 32);
+  const team = myTeam();
+  for (let ly = 0; ly < 32; ly++) for (let lx = 0; lx < 18; lx++) {
+    if (!SIM.placeOk(team, lx + 0.5, ly + 0.5, S.towersAlive)) {
+      if (ly >= CFG.RIVER_Y0 && ly < CFG.RIVER_Y1) continue;
+      g.fillStyle = 'rgba(230,40,40,0.38)'; g.fillRect(lx, 31 - ly, 1, 1);
+    }
+  }
+  ovTex.needsUpdate = true;
+}
+const ghost = new THREE.Group(); ghost.visible = false; scene.add(ghost);
+const ghostMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, depthWrite: false });
+function buildGhost(c) {
+  while (ghost.children.length) ghost.remove(ghost.children[0]);
+  const sz = SIM.SIZE[c.size];
+  for (const [ox, oy] of (SIM.FORMATION[c.count] || SIM.FORMATION[1])) {
+    const g = new THREE.Group(); g.position.set(ox, 0, -oy);
+    const d = new THREE.Mesh(new THREE.CircleGeometry(sz.r * 1.1, 20), ghostMat); d.rotation.x = -Math.PI / 2; d.position.y = 0.07; g.add(d);
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(sz.r * 0.5, sz.r * 0.6, sz.h * 1.1, 10), ghostMat); b.position.y = sz.h * 0.55 + (c.flying ? 1.3 : 0); g.add(b);
+    ghost.add(g);
+  }
+}
+const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitV = new THREE.Vector3();
+function pointerLocal(cx, cy) {
+  const r = canvas.getBoundingClientRect();
+  ndc.x = ((cx - r.left) / r.width) * 2 - 1; ndc.y = -((cy - r.top) / r.height) * 2 + 1;
+  raycaster.setFromCamera(ndc, camera);
+  if (!raycaster.ray.intersectPlane(groundPlane, hitV)) return null;
+  return { lx: hitV.x + 9, ly: 16 - hitV.z };
+}
+function overArena(cx, cy) {
+  const tr = $('tray').getBoundingClientRect();
+  const gr = gameEl.getBoundingClientRect();
+  return cy < tr.top && cx >= gr.left && cx <= gr.right && cy >= gr.top;
+}
+function updateGhost(cx, cy) {
+  if (S.sel === null || !overArena(cx, cy)) { ghost.visible = false; return; }
+  const p = pointerLocal(cx, cy);
+  if (!p) { ghost.visible = false; return; }
+  const lx = Math.floor(clamp(p.lx, 0, 17.99)) + 0.5, ly = Math.floor(clamp(p.ly, 0, 31.99)) + 0.5;
+  const ok = SIM.placeOk(myTeam(), lx, ly, S.towersAlive);
+  ghost.position.set(lx - 9, 0, 16 - ly);
+  ghostMat.color.set(ok ? 0xffffff : 0xff4040);
+  ghost.visible = true;
+}
+
+// =====================================================================
+//  CARTE (vassoio, selezione, giocata) + disegni SVG
+// =====================================================================
+function figureSVG(c) {
+  const T = thickness(c);
+  const sw = (2.4 + T * 40).toFixed(1);
+  const K = '#141414';
+  if (c.machine) {
+    return `<svg viewBox="0 0 100 110"><g>
+      <rect x="18" y="58" width="58" height="26" rx="5" fill="${K}"/>
+      <circle cx="28" cy="88" r="10" fill="#5e3b1e" stroke="${K}" stroke-width="3"/><circle cx="66" cy="88" r="10" fill="#5e3b1e" stroke="${K}" stroke-width="3"/>
+      <rect x="40" y="34" width="50" height="16" rx="6" fill="${K}" transform="rotate(-14 40 42)"/>
+      ${[0, 1, 2, 3].map(i => `<ellipse cx="${52 + i * 9}" cy="${38 - i * 2.2}" rx="4" ry="11" fill="none" stroke="#d9a520" stroke-width="4"/>`).join('')}
+      <path d="M88 26 l6 -6 m-6 6 l8 2" stroke="#4fc3ff" stroke-width="3" fill="none"/>
+    </g></svg>`;
+  }
+  const H = { S: 54, M: 62, L: 58, XL: 76 }[c.size];
+  const cx = 50, ground = 100;
+  let s = '', baseY = ground;
+  if (c.mount === 'horse') {
+    s += `<ellipse cx="48" cy="80" rx="27" ry="10" fill="#3b2e25"/>`;
+    for (const x of [28, 36, 60, 68]) s += `<line x1="${x}" y1="84" x2="${x}" y2="103" stroke="#3b2e25" stroke-width="4" stroke-linecap="round"/>`;
+    s += `<path d="M70 76 L82 58 L92 62 L84 72 Z" fill="#3b2e25"/><path d="M22 76 q-8 6 -6 16" stroke="${K}" stroke-width="3" fill="none"/>`;
+    baseY = 74;
+  } else if (c.mount === 'pig') {
+    s += `<ellipse cx="48" cy="84" rx="25" ry="12" fill="#7a5252"/>`;
+    for (const x of [32, 40, 56, 64]) s += `<line x1="${x}" y1="90" x2="${x}" y2="103" stroke="#7a5252" stroke-width="5" stroke-linecap="round"/>`;
+    s += `<circle cx="74" cy="80" r="10" fill="#7a5252"/><ellipse cx="83" cy="82" rx="4" ry="3.5" fill="#d98a8a"/><path d="M78 86 l5 5" stroke="#fff" stroke-width="2.5"/>`;
+    baseY = 76;
+  }
+  const fly = c.flying ? -14 : 0;
+  const legL = H * 0.42, torsoL = H * 0.36, armL = H * 0.34;
+  const hipY = (c.mount ? baseY : ground - legL) + fly;
+  const neckY = hipY - torsoL;
+  const headR = Math.max(7, +sw * 1.15);
+  const shY = neckY + 3;
+  if (c.flying) {
+    s += `<path d="M${cx} ${shY} L${cx - 30} ${shY - 16} L${cx - 22} ${shY + 6} Z" fill="#3b2f55"/><path d="M${cx} ${shY} L${cx + 30} ${shY - 16} L${cx + 22} ${shY + 6} Z" fill="#3b2f55"/>`;
+    s += `<ellipse cx="${cx}" cy="104" rx="14" ry="3" fill="rgba(0,0,0,.25)"/>`;
+  }
+  // gambe
+  if (!c.mount) s += `<line x1="${cx}" y1="${hipY}" x2="${cx - 11}" y2="${hipY + legL}" stroke="${K}" stroke-width="${sw}" stroke-linecap="round"/><line x1="${cx}" y1="${hipY}" x2="${cx + 11}" y2="${hipY + legL}" stroke="${K}" stroke-width="${sw}" stroke-linecap="round"/>`;
+  else s += `<line x1="${cx}" y1="${hipY}" x2="${cx - 9}" y2="${hipY + 10}" stroke="${K}" stroke-width="${sw}" stroke-linecap="round"/><line x1="${cx}" y1="${hipY}" x2="${cx + 9}" y2="${hipY + 10}" stroke="${K}" stroke-width="${sw}" stroke-linecap="round"/>`;
+  s += `<line x1="${cx}" y1="${hipY}" x2="${cx}" y2="${neckY}" stroke="${K}" stroke-width="${(+sw * 1.25).toFixed(1)}" stroke-linecap="round"/>`;
+  // braccia (mano destra = a destra del disegno)
+  let rh = [cx + armL * 0.75, shY + armL * 0.6], lh = [cx - armL * 0.75, shY + armL * 0.6];
+  const w = c.weapon;
+  if (['lance', 'spear', 'spearshield', 'shotgun', 'fire', 'ice', 'bow', 'hammer', 'mace', 'sword', 'twoswords', 'dagger'].includes(w)) rh = [cx + armL * 0.9, shY + armL * 0.25];
+  if (w === 'bow') lh = [cx - armL * 0.95, shY + armL * 0.1];
+  if (w === 'barrel') { rh = [cx + 9, shY - armL * 0.85]; lh = [cx - 9, shY - armL * 0.85]; }
+  if (w === 'cannon') rh = [cx + 10, shY - armL * 0.6];
+  s += `<line x1="${cx}" y1="${shY}" x2="${rh[0]}" y2="${rh[1]}" stroke="${K}" stroke-width="${(+sw * 0.8).toFixed(1)}" stroke-linecap="round"/>`;
+  s += `<line x1="${cx}" y1="${shY}" x2="${lh[0]}" y2="${lh[1]}" stroke="${K}" stroke-width="${(+sw * 0.8).toFixed(1)}" stroke-linecap="round"/>`;
+  s += `<circle cx="${cx}" cy="${neckY - headR + 1}" r="${headR}" fill="${K}"/>`;
+  if (c.champion) s += `<path d="M${cx - headR} ${neckY - headR * 1.6} l${headR * 0.5} ${-headR * 0.7} l${headR * 0.5} ${headR * 0.5} l${headR * 0.5} ${-headR * 0.5} l${headR * 0.5} ${headR * 0.7} z" fill="#f2c341"/>`;
+  const [rx, ry] = rh, [lx, ly] = lh;
+  const blade = (x, y, len, col) => `<line x1="${x}" y1="${y}" x2="${x + len * 0.55}" y2="${y - len}" stroke="${col}" stroke-width="4" stroke-linecap="round"/><line x1="${x - 5}" y1="${y - 2}" x2="${x + 5}" y2="${y + 2}" stroke="#d9a520" stroke-width="3"/>`;
+  switch (w) {
+    case 'lance': s += `<line x1="${rx - 12}" y1="${ry + 6}" x2="${rx + 30}" y2="${ry - 22}" stroke="#f2f2f2" stroke-width="6" stroke-linecap="round"/><line x1="${rx - 12}" y1="${ry + 6}" x2="${rx + 2}" y2="${ry - 3}" stroke="#3f7fd6" stroke-width="6"/><path d="M${rx + 30} ${ry - 22} l6 -6 l-1 8 z" fill="#c9d1db"/>`; break;
+    case 'spear': case 'spearshield': s += `<line x1="${rx - 8}" y1="${ry + 12}" x2="${rx + 16}" y2="${ry - 28}" stroke="#8a5a33" stroke-width="3.5" stroke-linecap="round"/><path d="M${rx + 16} ${ry - 28} l-2 -9 l7 5 z" fill="#c9d1db"/>`;
+      if (w === 'spearshield') s += `<rect x="${lx - 9}" y="${ly - 14}" width="14" height="20" rx="3" fill="#8a5a33" stroke="${K}" stroke-width="2"/>`; break;
+    case 'sword': s += blade(rx, ry, 26, '#f2c341'); break;
+    case 'twoswords': s += blade(rx, ry, 24, '#c9d1db') + blade(lx - 12, ly, 24, '#c9d1db'); break;
+    case 'dagger': s += blade(rx, ry, 12, '#c9d1db'); break;
+    case 'shotgun': s += `<rect x="${rx - 6}" y="${ry - 6}" width="30" height="8" rx="2" fill="#45484d" transform="rotate(-12 ${rx} ${ry})"/><rect x="${rx - 12}" y="${ry - 4}" width="10" height="9" rx="2" fill="#5e3b1e"/>`; break;
+    case 'hammer': s += `<line x1="${rx}" y1="${ry + 4}" x2="${rx + 8}" y2="${ry - 22}" stroke="#8a5a33" stroke-width="3.5"/><rect x="${rx}" y="${ry - 32}" width="18" height="11" rx="2" fill="#c9d1db" stroke="${K}" stroke-width="1.5" transform="rotate(15 ${rx + 9} ${ry - 26})"/>`; break;
+    case 'mace': s += `<line x1="${rx}" y1="${ry + 2}" x2="${rx + 10}" y2="${ry - 18}" stroke="#8a5a33" stroke-width="3.5"/><circle cx="${rx + 11}" cy="${ry - 21}" r="6" fill="#c9d1db" stroke="${K}" stroke-width="1.5"/><path d="M${rx + 11} ${ry - 30} v4 M${rx + 19} ${ry - 21} h-4 M${rx + 3} ${ry - 21} h4" stroke="#c9d1db" stroke-width="2.5"/>`;
+      s += `<rect x="${lx - 10}" y="${ly - 14}" width="14" height="20" rx="3" fill="#55595f" stroke="${K}" stroke-width="2"/>`; break;
+    case 'fire': s += `<circle cx="${rx + 4}" cy="${ry - 5}" r="8" fill="#ff8a1f"/><circle cx="${rx + 4}" cy="${ry - 7}" r="4" fill="#ffe08a"/>`; break;
+    case 'ice': s += `<circle cx="${rx + 4}" cy="${ry - 5}" r="8" fill="#9fe6ff"/><circle cx="${rx + 2}" cy="${ry - 7}" r="3" fill="#fff"/>`; break;
+    case 'bow': s += `<path d="M${lx + 2} ${ly - 20} q-14 20 0 40" fill="none" stroke="#8a5a33" stroke-width="3.5"/><line x1="${lx + 2}" y1="${ly - 20}" x2="${lx + 2}" y2="${ly + 20}" stroke="#eee" stroke-width="1.2"/><line x1="${lx + 2}" y1="${ly}" x2="${rx}" y2="${ry}" stroke="#6b4423" stroke-width="2"/>`; break;
+    case 'barrel': s += `<rect x="${cx - 15}" y="${shY - armL - 18}" width="30" height="20" rx="6" fill="#8a5a33" stroke="${K}" stroke-width="2"/><line x1="${cx - 7}" y1="${shY - armL - 18}" x2="${cx - 7}" y2="${shY - armL + 2}" stroke="#c9d1db" stroke-width="2.5"/><line x1="${cx + 7}" y1="${shY - armL - 18}" x2="${cx + 7}" y2="${shY - armL + 2}" stroke="#c9d1db" stroke-width="2.5"/>`; break;
+    case 'cannon': s += `<rect x="${cx - 2}" y="${shY - 18}" width="34" height="13" rx="5" fill="#45484d" stroke="${K}" stroke-width="2" transform="rotate(-18 ${cx} ${shY - 12})"/>`; break;
+    case 'fists': s += `<circle cx="${rx}" cy="${ry}" r="${+sw * 0.9}" fill="${K}"/><circle cx="${lx}" cy="${ly}" r="${+sw * 0.9}" fill="${K}"/>`; break;
+  }
+  return `<svg viewBox="0 0 100 110" preserveAspectRatio="xMidYMid meet">${s}</svg>`;
+}
+const svgCache = {};
+function cardHTML(ci, mini) {
+  const c = CARDS[ci];
+  const svg = svgCache[ci] || (svgCache[ci] = figureSVG(c));
+  return `<div class="card r-${c.rarity}${mini ? ' mini' : ''}" data-ci="${ci}">
+    <div class="inner">${svg}<div class="cname">${escapeHtml(c.name)}</div></div>
+    <div class="ccost font-g stroke">${c.cost}</div>
+    ${c.count > 1 ? `<div class="ccount">x${c.count}</div>` : ''}
+    <div class="cdim" style="height:0"></div>
+  </div>`;
+}
+
+let handKey = '';
+function applyHand(hand, next) {
+  const key = hand.join(',') + '|' + next;
+  if (key === handKey) return;
+  const old = S.hand.slice();
+  S.hand = hand.slice(); S.next = next; handKey = key;
+  // se la carta selezionata è cambiata, deseleziona
+  if (S.sel !== null && old[S.sel] !== hand[S.sel]) selectCard(null);
+  if (S.pending && old[S.pending.slot] !== hand[S.pending.slot]) S.pending = null;
+  $('hand').innerHTML = hand.map((ci, i) => `<div class="slotWrap" data-slot="${i}" style="position:relative;min-height:0">${cardHTML(ci)}</div>`).join('');
+  $('nextSlot').innerHTML = next !== undefined && next !== null ? cardHTML(next, true) : '<div class="slotEmpty">?</div>';
+  $('hand').querySelectorAll('.slotWrap').forEach(w => {
+    const slot = +w.dataset.slot;
+    w.firstElementChild.addEventListener('pointerdown', (ev) => cardDown(ev, slot));
+  });
+  refreshCardStates();
+}
+function clearHand() {
+  S.hand = []; S.next = null; handKey = ''; selectCard(null);
+  $('hand').innerHTML = '<div class="slotEmpty">?</div><div class="slotEmpty">?</div><div class="slotEmpty">?</div><div class="slotEmpty">?</div>';
+  $('nextSlot').innerHTML = '<div class="slotEmpty">?</div>';
+}
+function refreshCardStates() {
+  const champAlive = !!S.champ;
+  $('hand').querySelectorAll('.slotWrap').forEach(w => {
+    const slot = +w.dataset.slot, ci = S.hand[slot], c = CARDS[ci], el = w.firstElementChild;
+    const need = clamp(1 - S.elixir / c.cost, 0, 1);
+    el.querySelector('.cdim').style.height = (need * 100) + '%';
+    el.classList.toggle('sel', S.sel === slot);
+    el.classList.toggle('pending', !!S.pending && S.pending.slot === slot);
+    el.classList.toggle('locked', !!c.champion && champAlive);
+  });
+}
+function selectCard(slot) {
+  S.sel = slot;
+  const sn = $('selName');
+  if (slot === null || S.hand[slot] === undefined) {
+    sn.style.display = 'none'; overlay.visible = false; ghost.visible = false;
+  } else {
+    const c = CARDS[S.hand[slot]];
+    sn.querySelector('.n').textContent = c.name;
+    sn.querySelector('.s').textContent = `${c.cost} elisir · bersagli: ${SIM.TARGET_LABEL[c.targets]}${c.count > 1 ? ' · x' + c.count : ''}`;
+    sn.style.display = 'block';
+    drawOverlay(); overlay.visible = true;
+    buildGhost(c);
+  }
+  refreshCardStates();
+}
+let drag = null;
+function cardDown(ev, slot) {
+  ev.preventDefault(); audioInit();
+  if (S.phase !== 'battle' && S.phase !== 'count') return;
+  try { ev.target.releasePointerCapture && ev.target.releasePointerCapture(ev.pointerId); } catch (e) {}
+  drag = { slot, x: ev.clientX, y: ev.clientY, moved: false, wasSel: S.sel === slot };
+  if (S.sel !== slot) selectCard(slot);
+}
+window.addEventListener('pointermove', (ev) => {
+  if (drag && Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) > 8) drag.moved = true;
+  if (S.sel !== null) updateGhost(ev.clientX, ev.clientY);
+});
+window.addEventListener('pointerup', (ev) => {
+  const d = drag; drag = null;
+  if (S.sel === null) return;
+  if (overArena(ev.clientX, ev.clientY) && document.elementFromPoint(ev.clientX, ev.clientY) === canvas) {
+    if (d && !d.moved) return;
+    tryPlay(ev.clientX, ev.clientY);
+    return;
+  }
+  // tocco sulla carta già selezionata: la deseleziona
+  if (d && !d.moved && d.wasSel) selectCard(null);
+});
+canvas.addEventListener('pointerdown', (ev) => { audioInit(); if (S.sel !== null) updateGhost(ev.clientX, ev.clientY); });
+
+const NOPE = { elisir: 'Elisir insufficiente', posizione: 'Non puoi schierare lì', campione: 'Coto è già in campo', ricarica: 'Abilità in ricarica', nessuno: 'Nessun nemico vicino', carta: 'Carta non disponibile', finita: 'Partita finita' };
+function tryPlay(cx, cy) {
+  const slot = S.sel; if (slot === null) return;
+  const ci = S.hand[slot], c = CARDS[ci];
+  if (S.phase !== 'battle') { toast('Aspetta l\'inizio della battaglia'); return; }
+  const p = pointerLocal(cx, cy); if (!p) return;
+  const lx = Math.floor(clamp(p.lx, 0, 17.99)) + 0.5, ly = Math.floor(clamp(p.ly, 0, 31.99)) + 0.5;
+  if (!SIM.placeOk(myTeam(), lx, ly, S.towersAlive)) { toast(NOPE.posizione); return; }
+  if (S.elixir + 0.02 < c.cost) { toast(NOPE.elisir); return; }
+  if (c.champion && S.champ) { toast(NOPE.campione); return; }
+  const [ax, ay] = SIM.L(myTeam(), lx, ly);
+  netSend({ t: 'play', i: slot, card: c.id, x: ax, y: ay });
+  S.pending = { slot, t: performance.now() };
+  S.elixir = Math.max(0, S.elixir - c.cost);
+  // segno di schieramento immediato
+  ringFx(lx - 9, 16 - ly, 0.8, 0xffffff, 0.5);
+  selectCard(null);
+}
+
+// pulsante abilità del campione
+$('abilityBtn').onclick = (ev) => { ev.stopPropagation(); if (S.champ && !S.champ.deploying) netSend({ t: 'ability' }); };
+function renderAbility() {
+  const b = $('abilityBtn');
+  if (!S.champ || S.phase !== 'battle') { b.style.display = 'none'; return; }
+  b.style.display = 'flex';
+  const cd = S.champ.cd || 0;
+  const cdEl = b.querySelector('.cd');
+  cdEl.style.display = cd > 0 ? 'flex' : 'none'; cdEl.textContent = Math.ceil(cd);
+  b.classList.toggle('off', cd > 0 || S.elixir < 1 || S.champ.deploying);
+}
+
+// =====================================================================
+//  HUD / INTERFACCIA
 // =====================================================================
 const EMOTES = ['Ciao! 👋', 'Bella giocata!', 'Ops 😅', 'Grrr 😤', 'Grazie!', 'Ahahah 😂'];
 {
@@ -777,10 +1617,8 @@ const EMOTES = ['Ciao! 👋', 'Bella giocata!', 'Ops 😅', 'Grrr 😤', 'Grazie
 const bubbleTimers = {};
 function showBubble(who, i) {
   const b = $('bub_' + who); if (!b) return;
-  b.textContent = EMOTES[i] || '…';
-  b.classList.add('show');
-  clearTimeout(bubbleTimers[who]);
-  bubbleTimers[who] = setTimeout(() => b.classList.remove('show'), 2400);
+  b.textContent = EMOTES[i] || '…'; b.classList.add('show');
+  clearTimeout(bubbleTimers[who]); bubbleTimers[who] = setTimeout(() => b.classList.remove('show'), 2400);
 }
 let bannerT;
 function showBanner(big, sm = '', ms = 2200) {
@@ -789,18 +1627,8 @@ function showBanner(big, sm = '', ms = 2200) {
   clearTimeout(bannerT); bannerT = setTimeout(() => $('banner').classList.remove('show'), ms);
 }
 let toastT;
-function toast(t, ms = 1800) { const el = $('toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => el.style.display = 'none', ms); }
-
+function toast(t, ms = 1600) { const el = $('toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => el.style.display = 'none', ms); }
 function fmt(ms) { ms = Math.max(0, ms); const s = Math.ceil(ms / 1000); return (s / 60 | 0) + ':' + String(s % 60).padStart(2, '0'); }
-
-// moltiplicatore elisir in base al tempo di partita
-function elixirMult(clock) {
-  if (clock < CFG.X2_AT) return 1;
-  if (clock < CFG.REG_MS) return 2;
-  if (clock < CFG.REG_MS + CFG.OT_X3_AT) return 2;
-  return 3;
-}
-// "millisecondi equivalenti x1" prodotti da 0 a clock (lineare a tratti)
 function elixirProd(c) {
   c = Math.max(0, c);
   const a = CFG.X2_AT, b = CFG.REG_MS + CFG.OT_X3_AT;
@@ -808,47 +1636,43 @@ function elixirProd(c) {
   if (c <= b) return a + 2 * (c - a);
   return a + 2 * (b - a) + 3 * (c - b);
 }
-function overtime() { return S.clock >= CFG.REG_MS; }
-
 function renderHUD() {
   const c = S.clock;
   let rem, lbl;
   if (S.phase === 'battle' || S.phase === 'end') {
-    if (!overtime()) { rem = CFG.REG_MS - c; lbl = 'Tempo rimasto'; }
-    else { rem = CFG.REG_MS + CFG.OT_MS - c; lbl = 'Supplementare'; }
+    if (c < CFG.REG_MS) { rem = CFG.REG_MS - c; lbl = 'Tempo rimasto'; } else { rem = CFG.REG_MS + CFG.OT_MS - c; lbl = 'Supplementare'; }
   } else { rem = CFG.REG_MS; lbl = 'Tempo rimasto'; }
   $('timer').textContent = fmt(rem);
-  $('timer').classList.toggle('urg', (S.phase === 'battle') && rem <= 10000);
+  $('timer').classList.toggle('urg', S.phase === 'battle' && rem <= 10000);
   $('timerLbl').textContent = lbl;
-  const mult = S.phase === 'battle' ? elixirMult(c) : 1;
+  const mult = S.phase === 'battle' ? SIM.elixirMult(c) : 1;
   const mb = $('multBadge'); mb.style.display = mult > 1 ? 'inline-block' : 'none'; mb.textContent = 'x' + mult;
   $('bar').classList.toggle('x2', mult > 1);
-
-  // barra elisir: segmenti pieni + segmento in carica
-  const e = S.elixir, full = Math.floor(e);
+  const e = clamp(S.elixir, 0, 10), full = Math.floor(e);
   $('barFill').style.width = (full * 10) + '%';
   const part = $('barPart');
-  if (full < CFG.ELIXIR_MAX) { part.style.left = (full * 10) + '%'; part.style.width = ((e - full) * 10) + '%'; }
-  else part.style.width = '0';
+  if (full < CFG.ELIXIR_MAX) { part.style.left = (full * 10) + '%'; part.style.width = ((e - full) * 10) + '%'; } else part.style.width = '0';
   $('elixirNum').textContent = full;
-
   const me = S.role, op = me === 'host' ? 'guest' : 'host';
   $('crMe').textContent = S.crowns[me]; $('crOp').textContent = S.crowns[op];
-  $('opName').textContent = S.mode === 'solo' ? 'Allenamento' : S.opNick;
-  if (S.mode === 'solo') $('opSub').textContent = 'modalità prova';
+  $('opName').textContent = S.opNick;
 }
 
 // =====================================================================
-//  LOGICA DI GIOCO LOCALE (orologio + elisir)
+//  LOGICA LOCALE (orologio, elisir tra un aggiornamento e l'altro)
 // =====================================================================
 let lastClock = null, x2Shown = false, otShown = false, x3Shown = false;
-function resetMatch() {
+function resetMatchView() {
+  for (const e of [...ents.values()]) removeEnt(e);
+  for (const p of projs) fxGroup.remove(p.mesh); projs.length = 0;
   S.elixir = CFG.ELIXIR_START;
   S.crowns = { host: 0, guest: 0 };
-  S.towers = {};
-  for (const T of TOWERS) { const mx = T.kind === 'king' ? CFG.KING_HP : CFG.PRINCESS_HP; S.towers[T.id] = { hp: mx, max: mx }; }
+  S.towersHp = SIM.TOWERS.map(t => SIM.TOWER_STATS[t.kind].hp);
+  S.towersAlive = SIM.TOWERS.map(() => true);
+  S.towersActive = SIM.TOWERS.map(t => t.kind === 'princess');
+  S.champ = null; S.pending = null;
   lastClock = null; x2Shown = otShown = x3Shown = false;
-  refreshLabels();
+  buildTowers();
 }
 function tickGame() {
   if (S.phase === 'count') {
@@ -859,35 +1683,22 @@ function tickGame() {
   }
   $('countdown').classList.remove('on');
   if (S.phase !== 'battle') return;
-
-  // elisir: tra un aggiornamento del server e l'altro lo facciamo crescere in locale
-  // (il valore vero arriva dal server 10 volte al secondo)
-  if (lastClock !== null && S.clock > lastClock) {
-    S.elixir = Math.min(CFG.ELIXIR_MAX, S.elixir + (elixirProd(S.clock) - elixirProd(lastClock)) / CFG.ELIXIR_MS);
-  }
+  if (lastClock !== null && S.clock > lastClock) S.elixir = Math.min(CFG.ELIXIR_MAX, S.elixir + (elixirProd(S.clock) - elixirProd(lastClock)) / CFG.ELIXIR_MS);
   if (lastClock === null || S.clock > lastClock) lastClock = Math.max(0, S.clock);
-
   if (!x2Shown && S.clock >= CFG.X2_AT && S.clock < CFG.REG_MS) { x2Shown = true; showBanner('ELISIR x2!', '60 secondi rimasti'); }
   if (!otShown && S.clock >= CFG.REG_MS) { otShown = true; showBanner('SUPPLEMENTARE', 'Chi abbatte una torre vince!'); }
   if (!x3Shown && S.clock >= CFG.REG_MS + CFG.OT_X3_AT) { x3Shown = true; showBanner('ELISIR x3!', 'Ultimo minuto'); }
-
-  // in allenamento la fine la decide la pagina; online la decide il server
-  if (S.mode === 'solo') {
-    const tie = S.crowns.host === S.crowns.guest;
-    if ((S.clock >= CFG.REG_MS && !tie) || S.clock >= CFG.REG_MS + CFG.OT_MS) { S.phase = 'end'; showEnd(); }
-  }
+  if (S.pending && performance.now() - S.pending.t > 1500) S.pending = null;
 }
 
 // =====================================================================
-//  RETE: WebSocket verso il server di gioco (Node.js)
-//  Il server è l'arbitro: fasi, orologio ed elisir arrivano da lui.
+//  RETE: server online (WebSocket) oppure "server locale" per l'allenamento
 // =====================================================================
-const NET = { ws: null, start: null, connected: false, rtt: 80, opOn: false, pending: null, retry: 0, rt: null, serverEx: null };
-
+const NET = { ws: null, start: null, connected: false, rtt: 80, opOn: false, pending: null, retry: 0, rt: null };
+let LOCAL = null;
 function cleanCode(c) { return String(c || '').toLowerCase().replace(/^#/, '').replace(/^p-/, '').replace(/[^a-z0-9]/g, '').slice(0, 10); }
 function linkFor(code) { return location.origin + location.pathname + '#p-' + code; }
 function wsUrl() { return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'; }
-
 function connect() {
   if (NET.ws && (NET.ws.readyState === 0 || NET.ws.readyState === 1)) return;
   let ws;
@@ -895,62 +1706,128 @@ function connect() {
   NET.ws = ws;
   ws.onopen = () => {
     NET.connected = true; NET.retry = 0; updateNetPill();
-    if (S.mode === 'online' && S.code) wsSend({ t: 'join', code: S.code, nick: S.nick, token: ssGet('pl_tok_' + S.code) });
+    if (S.mode === 'online' && S.code) wsSend({ t: 'join', code: S.code, nick: S.nick, token: ssGet('pl_tok_' + S.code), deck: myDeck });
     else if (NET.pending) wsSend(NET.pending);
     NET.pending = null;
   };
-  ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } onMsg(m); };
+  ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } onMsg(m, 'net'); };
   ws.onclose = () => { if (NET.ws === ws) { NET.connected = false; updateNetPill(); scheduleReconnect(); } };
   ws.onerror = () => {};
 }
-function scheduleReconnect() {
-  clearTimeout(NET.rt);
-  const d = Math.min(8000, 500 * 2 ** NET.retry++);
-  NET.rt = setTimeout(connect, d);
-}
+function scheduleReconnect() { clearTimeout(NET.rt); NET.rt = setTimeout(connect, Math.min(8000, 500 * 2 ** NET.retry++)); }
 function wsSend(o) { if (NET.ws && NET.ws.readyState === 1) { NET.ws.send(JSON.stringify(o)); return true; } return false; }
 function action(o) { if (!wsSend(o)) { NET.pending = o; connect(); } }
-setInterval(() => wsSend({ t: 'ping', c: performance.now() }), 2000);
+function netSend(o) { if (S.mode === 'solo') { if (LOCAL) LOCAL.handle(o); } else wsSend(o); }
+setInterval(() => { if (S.mode !== 'solo') wsSend({ t: 'ping', c: performance.now() }); }, 2000);
 
-function onMsg(m) {
+// allenamento: la stessa simulazione del server, ma nel browser, contro il bot
+class LocalServer {
+  start(deck) {
+    this.stop();
+    this.sim = new SIM.Sim({ decks: [deck, SIM.randomDeck()] });
+    this.bot = new SIM.Bot(this.sim, 1);
+    this.phase = 'count'; this.t0 = Date.now() + CFG.COUNTDOWN_MS; this.ticks = 0;
+    this.timer = setInterval(() => this.tick(), 50);
+    this.emit({ t: 'room', code: 'bot', ph: 'count', role: 'host', players: [{ role: 'host', nick: S.nick, online: true }, { role: 'guest', nick: 'Bot', online: true }] });
+    this.send();
+  }
+  stop() { clearInterval(this.timer); this.timer = null; }
+  clk() { return this.phase === 'count' ? Date.now() - this.t0 : Math.round(this.sim.t * 1000); }
+  tick() {
+    if (this.phase === 'count') {
+      if (Date.now() >= this.t0) this.phase = 'battle';
+      else { if (++this.ticks % 2 === 0) this.send(); return; }
+    }
+    if (this.phase === 'battle') {
+      const target = Math.floor((Date.now() - this.t0) / 50);
+      let n = 0;
+      while (Math.round(this.sim.t * 20) < target && n < 40 && !this.sim.ended) { this.bot.think(0.05); this.sim.step(0.05); n++; }
+      if (this.sim.ended) {
+        this.phase = 'end'; this.send();
+        this.emit({ t: 'end', cr: this.sim.crowns, winner: this.sim.ended.winner, reason: this.sim.ended.reason });
+        this.stop(); return;
+      }
+      if (++this.ticks % 2 === 0) this.send();
+    }
+  }
+  send() {
+    const m = Object.assign({ t: 'st', ph: this.phase, clk: this.clk(), opOn: true }, this.sim.snapshot(0));
+    const ev = this.sim.flushEvents(); if (ev.length) m.ev = ev;
+    this.emit(m);
+  }
+  emit(m) { onMsg(m, 'local'); }
+  showcase() {   // solo per i test: tutte le truppe in fila
+    this.bot.think = () => {};
+    CARDS.forEach((c, i) => { const x = 1.5 + (i % 6) * 3, y = 3.5 + Math.floor(i / 6) * 3.2; const u = this.sim.spawn(i, 0, x, y + 4); u.deploy = 999; });
+  }
+  handle(m) {
+    switch (m.t) {
+      case 'play': { if (this.phase !== 'battle') return; const r = this.sim.play(0, m.i, m.x, m.y, m.card); if (!r.ok) this.emit({ t: 'nope', err: r.err, i: m.i }); break; }
+      case 'ability': { if (this.phase !== 'battle') return; const r = this.sim.ability(0); if (!r.ok) this.emit({ t: 'nope', err: r.err }); break; }
+      case 'emote': this.emit({ t: 'emote', role: 'host', i: m.i }); if (Math.random() < 0.5) setTimeout(() => this.emit({ t: 'emote', role: 'guest', i: (Math.random() * EMOTES.length) | 0 }), 900); break;
+      case 'rematch': this.start(m.deck || myDeck); break;
+      case 'leave': this.stop(); break;
+    }
+  }
+}
+
+function onMsg(m, src) {
   switch (m.t) {
-    case 'hello': if (m.cfg) Object.assign(CFG, m.cfg); return;
+    case 'hello': return;
     case 'pong': { const r = performance.now() - m.c; NET.rtt = NET.rtt * 0.7 + r * 0.3; return; }
     case 'joined': {
       S.mode = 'online'; S.code = m.code; S.role = m.role;
       ssSet('pl_tok_' + m.code, m.token);
       try { if (location.hash !== '#p-' + m.code) history.replaceState(null, '', '#p-' + m.code); } catch (e) {}
-      resetMatch(); buildTowers(); updateNetPill();
       S.phase = 'idle'; NET.start = null;
+      resetMatchView(); clearHand(); updateNetPill();
       return;
     }
     case 'room': {
-      if (S.mode !== 'online') return;
-      if (m.role && m.role !== S.role) { S.role = m.role; buildTowers(); }
+      if (S.mode === 'none') return;
+      if (m.role && m.role !== S.role) { S.role = m.role; resetMatchView(); }
       const op = (m.players || []).find(p => p && p.role !== S.role);
       const prevOn = NET.opOn;
       NET.opOn = !!(op && op.online);
       S.opNick = op ? op.nick : 'Avversario';
-      $('opSub').textContent = op ? (op.online ? 'connesso' : 'disconnesso') : 'in attesa…';
+      $('opSub').textContent = S.mode === 'solo' ? 'allenamento' : op ? (op.online ? 'connesso' : 'disconnesso') : 'in attesa…';
       if (S.phase === 'battle' && prevOn && !NET.opOn) toast(S.opNick + ' si è disconnesso…');
       if (S.phase === 'battle' && !prevOn && NET.opOn) toast(S.opNick + ' è rientrato');
       setPhase(m.ph);
       if (S.phase === 'wait') renderWaitStatus(op);
-      refreshLabels(); updateNetPill();
+      refreshTowerLabels(); updateNetPill();
       return;
     }
     case 'st': {
-      if (S.mode !== 'online') return;
-      // allinea l'orologio locale a quello del server (metà del ping = ritardo di andata)
-      const est = Date.now() - m.clk - NET.rtt / 2;
+      if (S.mode === 'none') return;
+      const rtt = src === 'local' ? 0 : NET.rtt;
+      const est = Date.now() - m.clk - rtt / 2;
       if (NET.start === null || Math.abs(est - NET.start) > 300) NET.start = est;
       else NET.start += (est - NET.start) * 0.1;
-      if (Array.isArray(m.cr)) { S.crowns.host = m.cr[0] | 0; S.crowns.guest = m.cr[1] | 0; }
       NET.opOn = !!m.opOn;
       setPhase(m.ph);
-      if (m.ph === 'battle') { S.elixir = m.ex; NET.serverEx = m.ex; lastClock = m.clk; }
+      if (m.hand) applyHand(m.hand, m.next);
+      if (typeof m.ex === 'number') {
+        if (m.ph === 'battle') { S.elixir = m.ex; lastClock = m.clk; } else S.elixir = m.ex;
+        if (S.pending && m.hand && m.hand[S.pending.slot] === S.hand[S.pending.slot] && performance.now() - S.pending.t < 400) {
+          // giocata non ancora elaborata dal server: mantieni la sottrazione prevista
+          const c = CARDS[S.hand[S.pending.slot]]; if (c) S.elixir = Math.max(0, S.elixir - c.cost);
+        }
+      }
+      if (Array.isArray(m.cr)) { S.crowns.host = m.cr[0] | 0; S.crowns.guest = m.cr[1] | 0; }
+      if (Array.isArray(m.tw)) {
+        m.tw.forEach((t, i) => {
+          S.towersHp[i] = t[0]; S.towersActive[i] = !!t[1];
+          if (t[0] <= 0 && S.towersAlive[i]) { S.towersAlive[i] = false; setTowerDestroyed(i, true); drawOverlay(); }
+        });
+        refreshTowerLabels();
+      }
+      S.champ = m.champ || null;
+      if (m.u) applyUnits(m.u);
+      if (m.ev) { const now = performance.now(); for (const e of m.ev) handleEvent(e, now); }
       return;
     }
+    case 'nope': { toast(NOPE[m.err] || 'Mossa non valida'); S.pending = null; return; }
     case 'emote': showBubble(m.role === S.role ? 'me' : 'op', m.i); return;
     case 'end': {
       if (Array.isArray(m.cr)) { S.crowns.host = m.cr[0] | 0; S.crowns.guest = m.cr[1] | 0; }
@@ -959,10 +1836,7 @@ function onMsg(m) {
       return;
     }
     case 'rematch': {
-      if (m.who !== S.role) {
-        $('rematchStatus').style.display = 'flex';
-        $('rematchStatus').innerHTML = '<span>' + escapeHtml(S.opNick) + ' vuole la rivincita!</span>';
-      }
+      if (m.who !== S.role) { $('rematchStatus').style.display = 'flex'; $('rematchStatus').innerHTML = '<span>' + escapeHtml(S.opNick) + ' vuole la rivincita!</span>'; }
       return;
     }
     case 'error': {
@@ -973,27 +1847,15 @@ function onMsg(m) {
     }
   }
 }
-function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-
 function setPhase(ph) {
   if (!ph || ph === S.phase) return;
   const prev = S.phase; S.phase = ph;
-  if (ph === 'wait') { NET.start = null; $('countdown').classList.remove('on'); showWait(S.code, S.role === 'host'); }
-  else if (ph === 'count') { resetMatch(); hideScreens(); }
-  else if (ph === 'battle') {
-    if (prev !== 'count') resetMatch();
-    hideScreens(); showBanner('BATTAGLIA!', '', 1300);
-  }
-  else if (ph === 'end') showEnd();
+  if (ph === 'wait') { NET.start = null; $('countdown').classList.remove('on'); clearHand(); showWait(S.code, S.role === 'host'); }
+  else if (ph === 'count') { resetMatchView(); hideScreens(); }
+  else if (ph === 'battle') { if (prev !== 'count') resetMatchView(); hideScreens(); showBanner('BATTAGLIA!', '', 1300); }
+  else if (ph === 'end') { selectCard(null); showEnd(); }
 }
-
-function beginBattle() { S.phase = 'battle'; lastClock = 0; showBanner('BATTAGLIA!', '', 1300); }  // solo allenamento
-
-function sendEmote(i) {
-  if (S.mode === 'online') wsSend({ t: 'emote', i });
-  else showBubble('me', i);
-}
-
+function sendEmote(i) { netSend({ t: 'emote', i }); }
 function setNet(cls, txt) { const p = $('netPill'); p.className = cls; $('netTxt').textContent = txt; }
 function updateNetPill() {
   if (S.mode === 'solo') return setNet('warn', 'allenamento');
@@ -1005,9 +1867,79 @@ function updateNetPill() {
 setInterval(updateNetPill, 2000);
 
 // =====================================================================
+//  MAZZO
+// =====================================================================
+let myDeck = SIM.validDeck(JSON.parse(lsGet('pl_deck') || 'null'));
+let editDeck = null, infoCi = null;
+function renderDeckPreview() { $('deckPreview').innerHTML = myDeck.map(id => cardHTML(SIM.CARD_INDEX[id], true)).join(''); }
+function openDeck() {
+  editDeck = myDeck.slice(); infoCi = SIM.CARD_INDEX[editDeck[0]];
+  $('deckScreen').classList.add('on'); renderDeckEditor();
+}
+function renderDeckEditor() {
+  const slots = [];
+  for (let i = 0; i < 8; i++) slots.push(editDeck[i] ? cardHTML(SIM.CARD_INDEX[editDeck[i]], true) : '<div class="slotEmpty">+</div>');
+  $('deckSlots').innerHTML = slots.join('');
+  const avg = editDeck.length ? (editDeck.reduce((s, id) => s + CARDS[SIM.CARD_INDEX[id]].cost, 0) / editDeck.length).toFixed(1) : '—';
+  $('deckAvg').textContent = `${editDeck.length}/8 · costo medio ${avg}`;
+  $('allCards').innerHTML = CARDS.map((c, ci) => cardHTML(ci, true)).join('');
+  $('allCards').querySelectorAll('.card').forEach(el => {
+    const ci = +el.dataset.ci, id = CARDS[ci].id;
+    el.classList.toggle('inDeck', editDeck.includes(id));
+    if (ci === infoCi) el.style.transform = 'translateY(-4px)';
+    el.onclick = () => {
+      if (infoCi !== ci) { infoCi = ci; renderDeckEditor(); return; }
+      const k = editDeck.indexOf(id);
+      if (k >= 0) editDeck.splice(k, 1);
+      else if (editDeck.length < 8) editDeck.push(id);
+      else toast('Il mazzo ha già 8 carte: togline una');
+      renderDeckEditor();
+    };
+  });
+  $('deckSlots').querySelectorAll('.card').forEach(el => { el.onclick = () => { const id = CARDS[+el.dataset.ci].id; editDeck.splice(editDeck.indexOf(id), 1); renderDeckEditor(); }; });
+  renderCardInfo();
+  $('btnDeckSave').disabled = editDeck.length !== 8;
+}
+function renderCardInfo() {
+  const c = CARDS[infoCi]; if (!c) { $('cardInfo').innerHTML = ''; return; }
+  const RAR = { common: 'Comune', rare: 'Rara', epic: 'Epica', legendary: 'Leggendaria', champion: 'Campione' };
+  const rows = [
+    ['Costo', c.cost + ' elisir'], ['Rarità', RAR[c.rarity]],
+    ['Punti ferita', c.hp + (c.shield ? ` (+${c.shield} scudo)` : '')],
+    [c.splash || c.splashMelee ? 'Danno ad area' : 'Danno', c.pellets ? `${c.dmg} x${c.pellets}` : c.dmg],
+    ['Velocità colpi', c.kamikaze ? '—' : c.hitSpeed + ' s'], ['Velocità', SIM.SPEED_LABEL[c.speed]],
+    ['Portata', c.rangeLabel || c.range], ['Bersagli', SIM.TARGET_LABEL[c.targets]]
+  ];
+  if (c.count > 1) rows.push(['Numero', c.count]);
+  if (c.chargeDmg) rows.push(['Danno in carica', c.chargeDmg]);
+  if (c.spawnDmg) rows.push(['Danno alla comparsa', c.spawnDmg]);
+  const notes = [];
+  if (c.flying) notes.push('vola');
+  if (c.jump) notes.push('salta il fiume');
+  if (c.charge) notes.push('dopo 2,5 caselle parte alla carica: colpo doppio');
+  if (c.slow) notes.push('rallenta i nemici per ' + c.slow + ' s');
+  if (c.kamikaze) notes.push('esplode contro gli edifici');
+  if (c.chargeUp) notes.push('si carica per ' + c.hitSpeed + ' s, poi un colpo enorme');
+  if (c.pellets) notes.push('10 pallini a ventaglio: da vicino colpiscono tutti');
+  if (c.champion) notes.push('campione: abilità "Scatto" (1 elisir) colpisce fino a 10 nemici');
+  if (c.estimated) notes.push('statistiche stimate (non erano nello screenshot)');
+  $('cardInfo').innerHTML = `<div class="t font-g stroke">${escapeHtml(c.name)}</div><div class="g">${rows.map(r => `<div><span>${r[0]}:</span> ${r[1]}</div>`).join('')}</div>` +
+    (notes.length ? `<div style="margin-top:6px;opacity:.85">• ${notes.join('<br>• ')}</div>` : '');
+}
+$('btnDeck').onclick = openDeck;
+$('btnDeckCancel').onclick = () => $('deckScreen').classList.remove('on');
+$('btnDeckSave').onclick = () => {
+  if (editDeck.length !== 8) return;
+  myDeck = editDeck.slice(); lsSet('pl_deck', JSON.stringify(myDeck));
+  renderDeckPreview(); $('deckScreen').classList.remove('on'); toast('Mazzo salvato!');
+  if (S.mode === 'online') wsSend({ t: 'deck', deck: myDeck });
+};
+renderDeckPreview();
+
+// =====================================================================
 //  SCHERMATE
 // =====================================================================
-function hideScreens() { $('lobby').classList.remove('on'); $('endScreen').classList.remove('on'); }
+function hideScreens() { $('lobby').classList.remove('on'); $('endScreen').classList.remove('on'); $('deckScreen').classList.remove('on'); }
 function showWait(code, asHost) {
   $('lobby').classList.add('on'); $('endScreen').classList.remove('on');
   $('lobbyMain').style.display = 'none'; $('lobbyWait').style.display = 'flex';
@@ -1026,45 +1958,38 @@ function renderWaitStatus(op) {
   $('waitStatus').innerHTML = '<div class="spin"></div><span>' + t + '</span>';
 }
 function backToLobby(sendLeave = true) {
-  if (sendLeave && S.mode === 'online') wsSend({ t: 'leave' });
-  S.mode = 'none'; S.phase = 'idle'; S.role = 'host'; S.code = null; NET.start = null; NET.opOn = false;
+  if (sendLeave) netSend({ t: 'leave' });
+  if (LOCAL) { LOCAL.stop(); LOCAL = null; }
+  S.mode = 'none'; S.phase = 'idle'; S.role = 'host'; S.code = null; NET.start = null; NET.opOn = false; S.opNick = 'Avversario';
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
-  resetMatch(); buildTowers();
+  resetMatchView(); clearHand();
   $('endScreen').classList.remove('on'); $('countdown').classList.remove('on');
   $('lobby').classList.add('on'); $('lobbyMain').style.display = 'flex'; $('lobbyWait').style.display = 'none';
+  $('opSub').textContent = 'in attesa…';
   updateNetPill();
 }
 function showEnd() {
   const me = S.role, op = me === 'host' ? 'guest' : 'host';
   const a = S.crowns[me], b = S.crowns[op];
-  $('endRes').textContent = a > b ? 'Vittoria!' : a < b ? 'Sconfitta' : 'Pareggio';
+  const reason = NET.endReason;
+  let res = a > b ? 'Vittoria!' : a < b ? 'Sconfitta' : 'Pareggio';
+  $('endRes').textContent = res;
   $('endRes').style.color = a > b ? '#ffd23f' : a < b ? '#ff9a92' : '#fff';
-  $('endSub').textContent = S.mode === 'solo' ? 'Fine allenamento' : (NET.endReason === 'abbandono' ? S.opNick + ' ha abbandonato' : 'Contro ' + S.opNick);
-  $('endMe').textContent = 'Tu · ' + a; $('endOp').textContent = (S.mode === 'solo' ? 'Avv.' : S.opNick) + ' · ' + b;
+  const why = { re: 'Torre del re abbattuta!', abbandono: S.opNick + ' ha abbandonato', spareggio: 'Decide la torre più danneggiata', tempo: 'Tempo scaduto', supplementare: 'Decisa nel supplementare' }[reason] || '';
+  $('endSub').textContent = (S.mode === 'solo' ? 'Allenamento · ' : 'Contro ' + S.opNick + ' · ') + why;
+  $('endMe').textContent = 'Tu · ' + a; $('endOp').textContent = S.opNick + ' · ' + b;
   $('rematchStatus').style.display = 'none'; $('btnRematch').disabled = false;
   $('endScreen').classList.add('on');
 }
-
-function getNick() {
-  const n = $('nick').value.trim().slice(0, 16);
-  if (n) { S.nick = n; lsSet('pl_nick', n); }
-  return S.nick;
-}
+function getNick() { const n = $('nick').value.trim().slice(0, 16); if (n) { S.nick = n; lsSet('pl_nick', n); } return S.nick; }
 $('nick').value = lsGet('pl_nick') || '';
 if ($('nick').value) S.nick = $('nick').value;
-
 function joinCode(code) {
   S.code = null; S.role = 'guest';
-  showWait(code, false);
-  $('waitCode').textContent = code;
-  action({ t: 'join', code, nick: S.nick, token: ssGet('pl_tok_' + code) });
+  showWait(code, false); $('waitCode').textContent = code;
+  action({ t: 'join', code, nick: S.nick, token: ssGet('pl_tok_' + code), deck: myDeck });
 }
-$('btnCreate').onclick = () => {
-  getNick(); $('lobbyErr').textContent = '';
-  S.code = null; S.role = 'host';
-  showWait(null, true);
-  action({ t: 'create', nick: S.nick });
-};
+$('btnCreate').onclick = () => { getNick(); $('lobbyErr').textContent = ''; S.code = null; S.role = 'host'; showWait(null, true); action({ t: 'create', nick: S.nick, deck: myDeck }); };
 $('btnJoin').onclick = () => {
   getNick(); $('lobbyErr').textContent = '';
   const code = cleanCode($('codeIn').value);
@@ -1072,74 +1997,157 @@ $('btnJoin').onclick = () => {
   joinCode(code);
 };
 $('btnSolo').onclick = () => {
-  getNick();
-  S.mode = 'solo'; S.role = 'host'; S.opNick = 'Allenamento'; resetMatch(); buildTowers();
-  NET.start = Date.now() + CFG.COUNTDOWN_MS; S.phase = 'count'; hideScreens(); updateNetPill();
+  getNick(); audioInit();
+  S.mode = 'solo'; S.role = 'host'; S.code = null; S.phase = 'idle'; S.opNick = 'Bot';
+  resetMatchView(); hideScreens(); updateNetPill();
+  LOCAL = new LocalServer(); LOCAL.start(myDeck);
+  if (location.search.includes('vetrina')) setTimeout(() => LOCAL.showcase(), 3300);
 };
 $('btnLeave').onclick = () => backToLobby(true);
 $('btnExit').onclick = () => backToLobby(true);
 $('btnCopy').onclick = () => {
   const t = $('linkBox').textContent;
-  const ok = () => toast('Link copiato!');
-  try { navigator.clipboard.writeText(t).then(ok, () => { selectLink(); toast('Seleziona e copia il link'); }); }
+  try { navigator.clipboard.writeText(t).then(() => toast('Link copiato!'), () => { selectLink(); toast('Seleziona e copia il link'); }); }
   catch (e) { selectLink(); toast('Seleziona e copia il link'); }
 };
 function selectLink() { const r = document.createRange(); r.selectNodeContents($('linkBox')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
 $('btnRematch').onclick = () => {
-  if (S.mode === 'solo') { resetMatch(); NET.start = Date.now() + CFG.COUNTDOWN_MS; S.phase = 'count'; hideScreens(); return; }
-  wsSend({ t: 'rematch' });
+  netSend({ t: 'rematch', deck: myDeck });
+  if (S.mode === 'solo') return;
   $('btnRematch').disabled = true;
   $('rematchStatus').style.display = 'flex';
   $('rematchStatus').innerHTML = '<div class="spin"></div><span>In attesa che anche ' + escapeHtml(S.opNick) + ' accetti…</span>';
 };
-
-// pannello debug
 $('netPill').onclick = (e) => { e.stopPropagation(); $('debug').classList.toggle('open'); };
 $('debug').onclick = e => e.stopPropagation();
+const grid = new THREE.Group(); grid.visible = false; scene.add(grid);
+{
+  const pts = [];
+  for (let x = 0; x <= CFG.W; x++) pts.push(x - 9, 0.06, -16, x - 9, 0.06, 16);
+  for (let y = 0; y <= CFG.H; y++) pts.push(-9, 0.06, 16 - y, 9, 0.06, 16 - y);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  grid.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 })));
+}
 function renderDebug() {
   const d = $('debug'); if (!d.classList.contains('open')) return;
-  d.innerHTML =
-    'modalità: ' + S.mode + ' · ruolo: ' + S.role + '<br>' +
-    'fase: ' + S.phase + ' · orologio: ' + (S.clock / 1000).toFixed(1) + 's<br>' +
-    'mio elisir: ' + S.elixir.toFixed(2) + ' (server: ' + (NET.serverEx == null ? '—' : NET.serverEx.toFixed(2)) + ')<br>' +
-    'ping: ' + Math.round(NET.rtt) + 'ms · avversario: ' + (NET.opOn ? 'connesso' : 'no') + '<br>' +
+  d.innerHTML = 'modalità: ' + S.mode + ' · ruolo: ' + S.role + '<br>fase: ' + S.phase + ' · orologio: ' + (S.clock / 1000).toFixed(1) + 's<br>' +
+    'elisir: ' + S.elixir.toFixed(2) + ' · truppe in campo: ' + ents.size + '<br>ping: ' + Math.round(NET.rtt) + 'ms<br>' +
     '<label><input type="checkbox" id="dbgGrid"' + (grid.visible ? ' checked' : '') + '> mostra griglia 18×32</label>';
   $('dbgGrid').onchange = (e) => { grid.visible = e.target.checked; };
 }
-let dbgT = 0;
+
+// =====================================================================
+//  CAMERA
+// =====================================================================
+const _pv = new THREE.Vector3();
+const FIT_PTS = [];
+for (const x of [-9.4, 9.4]) for (const z of [-16.4, 16.4]) FIT_PTS.push(new THREE.Vector3(x, 0, z));
+FIT_PTS.push(new THREE.Vector3(0, 4.5, -13), new THREE.Vector3(-5.5, 3.5, -9.5), new THREE.Vector3(5.5, 3.5, -9.5));
+let camBase = new THREE.Vector3(), shake = 0;
+function fitCamera(r) {
+  const pitch = 57 * Math.PI / 180;
+  camera.fov = 36; camera.updateProjectionMatrix();
+  const tray = $('tray').getBoundingClientRect().height || r.height * 0.24;
+  const yBot = -1 + 2 * (tray + 6) / r.height, yTop = 1 - 2 * 64 / r.height;
+  const place = (d, tz) => { camera.position.set(0, d * Math.sin(pitch), tz + d * Math.cos(pitch)); camera.lookAt(0, 0, tz); camera.updateMatrixWorld(); };
+  const ext = () => {
+    let mnY = 9, mxY = -9, mxX = 0;
+    for (const p of FIT_PTS) { _pv.copy(p).project(camera); mnY = Math.min(mnY, _pv.y); mxY = Math.max(mxY, _pv.y); mxX = Math.max(mxX, Math.abs(_pv.x)); }
+    return { mnY, mxY, mxX };
+  };
+  let lo = 15, hi = 160, tz = 0;
+  for (let it = 0; it < 26; it++) {
+    const d = (lo + hi) / 2;
+    for (let k = 0; k < 10; k++) { place(d, tz); const e = ext(); tz -= ((e.mnY + e.mxY) / 2 - (yBot + yTop) / 2) * d * 0.35; }
+    place(d, tz); const e = ext();
+    if (e.mxX <= 1.0 && (e.mxY - e.mnY) <= (yTop - yBot)) hi = d; else lo = d;
+  }
+  place(hi, tz);
+  camBase.copy(camera.position);
+}
+function resize() {
+  const r = gameEl.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height;
+  fitCamera(r);
+}
+window.addEventListener('resize', resize);
+
+function project(x, y, h) {
+  const w = viewXZ(x, y);
+  _pv.set(w.x, h, w.z).project(camera);
+  return _pv;
+}
+function placeLabels(now) {
+  const r = gameEl.getBoundingClientRect();
+  SIM.TOWERS.forEach((T, i) => {
+    const el = towerLabels[i]; if (!el) return;
+    const v = project(T.x, T.y, T.kind === 'king' ? 4.55 : 3.75);
+    el.style.left = ((v.x + 1) / 2 * r.width) + 'px'; el.style.top = ((1 - v.y) / 2 * r.height) + 'px';
+  });
+  for (const k of ['me', 'op']) {
+    const b = $('bub_' + k); if (!b) continue;
+    const kingI = (k === 'me') === (S.role === 'host') ? 0 : 3;
+    const T = SIM.TOWERS[kingI];
+    const dx = (k === 'me' ? -3.6 : 3.6) * (myTeam() === 0 ? 1 : -1);
+    const v = project(T.x + dx, T.y, k === 'me' ? 4.2 : 5);
+    b.style.left = ((v.x + 1) / 2 * r.width) + 'px'; b.style.top = ((1 - v.y) / 2 * r.height) + 'px';
+  }
+  for (const e of ents.values()) {
+    if (!e.bar) continue;
+    const p = e.root.position;
+    _pv.set(p.x, e.top + e.parts.body.position.y + 0.25, p.z).project(camera);
+    e.bar.style.left = ((_pv.x + 1) / 2 * r.width) + 'px'; e.bar.style.top = ((1 - _pv.y) / 2 * r.height) + 'px';
+  }
+  for (let i = floaters.length - 1; i >= 0; i--) {
+    const f = floaters[i], age = (now - f.t) / 1000;
+    if (age > 1.4) { f.d.remove(); floaters.splice(i, 1); continue; }
+    const v = project(f.x, f.y, 2.2 + age * 0.8);
+    f.d.style.left = ((v.x + 1) / 2 * r.width) + 'px'; f.d.style.top = ((1 - v.y) / 2 * r.height) + 'px';
+    f.d.style.opacity = age > 1 ? (1.4 - age) / 0.4 : 1;
+  }
+}
 
 // =====================================================================
 //  LOOP
 // =====================================================================
 function logicStep() {
-  if ((S.phase === 'count' || S.phase === 'battle') && NET.start !== null) {
-    S.clock = Date.now() - NET.start;
-    if (S.mode === 'solo' && S.phase === 'count' && S.clock >= 0) beginBattle();
-  }
+  if ((S.phase === 'count' || S.phase === 'battle') && NET.start !== null) S.clock = Date.now() - NET.start;
   tickGame();
 }
-// anche con la scheda in background (dove il disegno si ferma) la logica continua
 setInterval(logicStep, 100);
-let t0 = performance.now();
+let t0 = performance.now(), dbgT = 0;
 function frame(now) {
   const dt = Math.min(0.05, (now - t0) / 1000); t0 = now;
   logicStep();
-  // acqua e bandiere
   waterTex.offset.x -= dt * 0.04; waterTex.offset.y += dt * 0.01;
   const tt = now / 1000;
   for (let i = 0; i < flags.length; i++) {
     const f = flags[i], pos = f.geometry.attributes.position;
     if (!f.userData.base) f.userData.base = pos.array.slice();
     const b = f.userData.base;
-    for (let k = 0; k < pos.count; k++) {
-      const x = b[k * 3];
-      pos.array[k * 3 + 2] = Math.sin(tt * 5 - x * 6 + i) * 0.09 * x;
-    }
+    for (let k = 0; k < pos.count; k++) { const x = b[k * 3]; pos.array[k * 3 + 2] = Math.sin(tt * 5 - x * 6 + i) * 0.09 * x; }
     pos.needsUpdate = true;
   }
+  // tiratori: il re dorme finché non viene attivato
+  towerObjs.forEach((o, i) => {
+    if (!o) return;
+    const king = SIM.TOWERS[i].kind === 'king';
+    const active = S.towersActive[i];
+    o.shooter.g.scale.y = king && !active ? 0.75 : 1;
+    if (king && !active) o.shooter.armR.rotation.x = -0.3;
+    else if (!(o.recoil > 0)) o.shooter.armR.rotation.x = -Math.PI / 2;
+  });
+  updateEnts(now, dt);
+  updateProjs(now, dt);
+  updateFx(dt);
+  if (shake > 0) { shake -= dt; camera.position.set(camBase.x + (Math.random() - .5) * shake * 0.6, camBase.y, camBase.z + (Math.random() - .5) * shake * 0.6); }
+  else camera.position.copy(camBase);
   renderer.render(scene, camera);
-  placeLabels();
+  placeLabels(now);
   renderHUD();
+  refreshCardStates();
+  renderAbility();
   if (now - dbgT > 250) { dbgT = now; renderDebug(); }
   requestAnimationFrame(frame);
 }
@@ -1147,17 +2155,15 @@ function frame(now) {
 // =====================================================================
 //  AVVIO
 // =====================================================================
-resetMatch(); buildTowers(); resize(); updateNetPill();
+resetMatchView(); clearHand(); resize(); updateNetPill(); drawOverlay();
 requestAnimationFrame(frame);
-// link con codice partita: #p-xxxxx
 connect();
 (function autoJoin() {
   const h = cleanCode((location.hash || '').replace('#', ''));
   if (location.hash.startsWith('#p-') && h.length >= 4) {
     $('codeIn').value = h;
     if (!lsGet('pl_nick')) { $('lobbyErr').textContent = 'Scrivi il tuo nome e premi "Entra" per unirti alla partita ' + h + '.'; $('nick').focus(); return; }
-    getNick();
-    joinCode(h);
+    getNick(); joinCode(h);
   }
 })();
 window.addEventListener('hashchange', () => {

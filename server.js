@@ -1,34 +1,24 @@
 // =====================================================================
-//  Arena Piazza Leonardo — server di gioco (Node.js + WebSocket)
+//  Bazoo Game — server di gioco (Node.js + WebSocket)
 //  - serve la pagina del gioco (cartella public/)
-//  - gestisce le partite 1v1: codice partita, fasi, orologio ed elisir
-//  Il server è l'arbitro: decide il tempo e calcola l'elisir di tutti e due.
+//  - gestisce le partite 1v1: codice partita, fasi, mazzi
+//  - fa girare la battaglia (public/sim.js): è l'arbitro, i client
+//    mandano solo "gioco questa carta qui" e ricevono lo stato.
 // =====================================================================
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
+const SIM = require('./public/sim.js');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, 'public');
+const CFG = SIM.CFG;
 
-// Regole (ispirate a Clash Royale). Vengono mandate anche al client.
-const CFG = {
-  W: 18, H: 32,
-  ELIXIR_START: 5,
-  ELIXIR_MAX: 10,
-  ELIXIR_MS: 2800,          // 1 elisir ogni 2,8 s (x1)
-  REG_MS: 180000,           // 3:00
-  X2_AT: 120000,            // ultimo minuto: x2
-  OT_MS: 120000,            // supplementare 2:00
-  OT_X3_AT: 60000,          // ultimo minuto di supplementare: x3
-  COUNTDOWN_MS: 3000,
-  KING_HP: 4824,
-  PRINCESS_HP: 3052
-};
-const TICK_MS = 100;                 // 10 aggiornamenti al secondo
-const ROOM_IDLE_MS = 10 * 60 * 1000; // stanza vuota/inattiva: eliminata dopo 10 min
+const TICK_MS = 50;                  // 20 passi di simulazione al secondo
+const SEND_EVERY = 2;                // stato ai client 10 volte al secondo
+const ROOM_IDLE_MS = 10 * 60 * 1000; // stanza inattiva: eliminata dopo 10 min
 const ROLES = ['host', 'guest'];
 
 // ---------------------------------------------------------------------
@@ -66,71 +56,70 @@ function newCode() {
 const newToken = () => crypto.randomBytes(12).toString('hex');
 const cleanNick = n => String(n || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 16) || 'Giocatore';
 
-// "millisecondi equivalenti x1" prodotti da 0 a clk (lineare a tratti)
-function elixirProd(c) {
-  c = Math.max(0, c);
-  const a = CFG.X2_AT, b = CFG.REG_MS + CFG.OT_X3_AT;
-  if (c <= a) return c;
-  if (c <= b) return a + 2 * (c - a);
-  return a + 2 * (b - a) + 3 * (c - b);
-}
-
 function makeRoom() {
-  const room = { code: newCode(), slots: [null, null], phase: 'wait', start: null, crowns: [0, 0], rematch: [false, false], lastActive: Date.now() };
+  const room = { code: newCode(), slots: [null, null], phase: 'wait', start: null, sim: null, ticks: 0,
+    crowns: [0, 0], rematch: [false, false], lastActive: Date.now(), result: null };
   rooms.set(room.code, room);
   return room;
 }
-function clockOf(room) { return room.start === null ? 0 : Date.now() - room.start; }
 
 function send(ws, msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
 function sendRoomInfo(room) {
   const players = room.slots.map((p, i) => p ? { role: ROLES[i], nick: p.nick, online: !!p.ws } : null);
   room.slots.forEach((p, i) => p && send(p.ws, { t: 'room', code: room.code, ph: room.phase, role: ROLES[i], players }));
 }
-function sendState(room) {
+function clockOf(room) {
+  if (room.phase === 'battle' || room.phase === 'end') return room.sim ? Math.round(room.sim.t * 1000) : 0;
+  if (room.phase === 'count' && room.start) return Date.now() - room.start;
+  return 0;
+}
+function sendState(room, events) {
   const clk = clockOf(room);
   room.slots.forEach((p, i) => {
-    if (!p) return;
+    if (!p || !p.ws) return;
     const op = room.slots[1 - i];
-    send(p.ws, { t: 'st', ph: room.phase, clk, ex: Math.round(p.ex * 1000) / 1000, cr: room.crowns, opOn: !!(op && op.ws) });
+    const msg = { t: 'st', ph: room.phase, clk, opOn: !!(op && op.ws) };
+    if (room.sim) Object.assign(msg, room.sim.snapshot(i));
+    if (events && events.length) msg.ev = events;
+    send(p.ws, msg);
   });
 }
 
-function resetMatch(room) {
-  room.crowns = [0, 0];
-  room.rematch = [false, false];
-  room.slots.forEach(p => { if (p) { p.ex = CFG.ELIXIR_START; p.lastClk = 0; } });
-}
 function startCountdown(room) {
-  resetMatch(room);
+  room.rematch = [false, false];
+  room.result = null;
+  room.sim = new SIM.Sim({ decks: [room.slots[0].deck, room.slots[1].deck] });
+  room.crowns = [0, 0];
   room.phase = 'count';
   room.start = Date.now() + CFG.COUNTDOWN_MS;
+  room.ticks = 0;
   sendRoomInfo(room); sendState(room);
 }
-function endMatch(room, reason) {
+function endMatch(room, winner, reason) {
   room.phase = 'end';
-  room.slots.forEach((p, i) => p && send(p.ws, { t: 'end', cr: room.crowns, reason: reason || 'tempo' }));
-  sendState(room);
+  if (room.sim) room.crowns = room.sim.crowns.slice();
+  room.result = { cr: room.crowns.slice(), winner, reason };
+  sendState(room, room.sim ? room.sim.flushEvents() : []);
+  room.slots.forEach(p => p && send(p.ws, { t: 'end', cr: room.crowns, winner, reason }));
 }
 function bothOnline(room) { return room.slots.every(p => p && p.ws); }
 
 function tickRoom(room) {
   if (room.phase === 'wait' && bothOnline(room)) return startCountdown(room);
   if (room.phase === 'count') {
-    if (!bothOnline(room)) { room.phase = 'wait'; room.start = null; sendRoomInfo(room); return; }
-    if (clockOf(room) >= 0) { room.phase = 'battle'; sendRoomInfo(room); }
+    if (!bothOnline(room)) { room.phase = 'wait'; room.start = null; room.sim = null; sendRoomInfo(room); return; }
+    if (Date.now() >= room.start) { room.phase = 'battle'; sendRoomInfo(room); }
+    else if (++room.ticks % SEND_EVERY === 0) sendState(room);
+    return;
   }
   if (room.phase === 'battle') {
-    const clk = clockOf(room);
-    for (const p of room.slots) {
-      if (!p) continue;
-      p.ex = Math.min(CFG.ELIXIR_MAX, p.ex + (elixirProd(clk) - elixirProd(p.lastClk)) / CFG.ELIXIR_MS);
-      p.lastClk = clk;
-    }
-    const tie = room.crowns[0] === room.crowns[1];
-    if ((clk >= CFG.REG_MS && !tie) || clk >= CFG.REG_MS + CFG.OT_MS) return endMatch(room, 'tempo');
+    // passi fissi agganciati al tempo reale (recupera se il server rallenta)
+    const target = Math.floor((Date.now() - room.start) / TICK_MS);
+    let steps = 0;
+    while (room.sim.t * 1000 / TICK_MS < target && steps < 10 && !room.sim.ended) { room.sim.step(TICK_MS / 1000); steps++; }
+    if (room.sim.ended) return endMatch(room, room.sim.ended.winner, room.sim.ended.reason);
+    if (++room.ticks % SEND_EVERY === 0) sendState(room, room.sim.flushEvents());
   }
-  if (room.phase === 'count' || room.phase === 'battle') sendState(room);
 }
 
 setInterval(() => {
@@ -139,7 +128,7 @@ setInterval(() => {
     const anyOnline = room.slots.some(p => p && p.ws);
     if (anyOnline) room.lastActive = now;
     else if (now - room.lastActive > ROOM_IDLE_MS) { rooms.delete(room.code); continue; }
-    tickRoom(room);
+    try { tickRoom(room); } catch (e) { console.error('Errore nella stanza', room.code, e); }
   }
 }, TICK_MS);
 
@@ -165,7 +154,7 @@ wss.on('connection', (ws) => {
       case 'create': {
         detach(ws);
         const room = makeRoom();
-        attach(ws, room, 0, cleanNick(m.nick), newToken());
+        attach(ws, room, 0, cleanNick(m.nick), newToken(), m.deck);
         return;
       }
       case 'join': {
@@ -173,25 +162,43 @@ wss.on('connection', (ws) => {
         const room = rooms.get(code);
         if (!room) return send(ws, { t: 'error', code: 'notfound', msg: 'Partita non trovata. Controlla il codice o creane una nuova.' });
         detach(ws);
-        // rientro con lo stesso posto (ricarica pagina / connessione persa)
         const back = room.slots.findIndex(p => p && m.token && p.token === m.token);
-        if (back >= 0) { attach(ws, room, back, cleanNick(m.nick) || room.slots[back].nick, m.token); return; }
+        if (back >= 0) { attach(ws, room, back, cleanNick(m.nick) || room.slots[back].nick, m.token, m.deck); return; }
         const free = room.slots.findIndex(p => p === null);
         if (free < 0) return send(ws, { t: 'error', code: 'full', msg: 'Questa partita è già piena.' });
-        attach(ws, room, free, cleanNick(m.nick), newToken());
+        attach(ws, room, free, cleanNick(m.nick), newToken(), m.deck);
+        return;
+      }
+      case 'deck': {
+        if (!ctx) return;
+        const p = ctx.room.slots[ctx.slot];
+        p.deck = SIM.validDeck(m.deck);
+        return;
+      }
+      case 'play': {
+        if (!ctx || ctx.room.phase !== 'battle' || !ctx.room.sim) return;
+        const r = ctx.room.sim.play(ctx.slot, m.i, m.x, m.y, m.card);
+        if (!r.ok) send(ws, { t: 'nope', err: r.err, i: m.i });
+        return;
+      }
+      case 'ability': {
+        if (!ctx || ctx.room.phase !== 'battle' || !ctx.room.sim) return;
+        const r = ctx.room.sim.ability(ctx.slot);
+        if (!r.ok) send(ws, { t: 'nope', err: r.err });
         return;
       }
       case 'emote': {
         if (!ctx) return;
         const i = m.i | 0; if (i < 0 || i > 20) return;
         const now = Date.now(); const p = ctx.room.slots[ctx.slot];
-        if (p.lastEmote && now - p.lastEmote < 800) return; // anti-spam
+        if (p.lastEmote && now - p.lastEmote < 800) return;
         p.lastEmote = now;
         ctx.room.slots.forEach(q => q && send(q.ws, { t: 'emote', role: ROLES[ctx.slot], i }));
         return;
       }
       case 'rematch': {
         if (!ctx || ctx.room.phase !== 'end') return;
+        if (Array.isArray(m.deck)) ctx.room.slots[ctx.slot].deck = SIM.validDeck(m.deck);
         ctx.room.rematch[ctx.slot] = true;
         if (ctx.room.rematch[0] && ctx.room.rematch[1] && bothOnline(ctx.room)) startCountdown(ctx.room);
         else ctx.room.slots.forEach(q => q && send(q.ws, { t: 'rematch', who: ROLES[ctx.slot] }));
@@ -201,11 +208,11 @@ wss.on('connection', (ws) => {
         if (!ctx) return;
         const room = ctx.room, slot = ctx.slot;
         ws.ctx = null;
-        // abbandono durante la battaglia = vittoria dell'altro
         if (room.phase === 'battle' || room.phase === 'count') {
+          if (room.sim) room.sim.crowns[1 - slot] = 3;
           room.crowns[1 - slot] = 3;
           room.slots[slot] = null;
-          endMatch(room, 'abbandono');
+          endMatch(room, 1 - slot, 'abbandono');
         } else {
           room.slots[slot] = null;
           if (room.phase === 'end') room.phase = 'wait';
@@ -219,18 +226,19 @@ wss.on('connection', (ws) => {
   ws.on('close', () => detach(ws));
 });
 
-function attach(ws, room, slot, nick, token) {
+function attach(ws, room, slot, nick, token, deck) {
   const prev = room.slots[slot];
   if (prev && prev.ws && prev.ws !== ws) { prev.ws.ctx = null; send(prev.ws, { t: 'error', code: 'replaced', msg: 'Sei entrato da un\'altra finestra.' }); }
-  const p = prev || { ex: CFG.ELIXIR_START, lastClk: 0 };
+  const p = prev || {};
   p.nick = nick; p.token = token; p.ws = ws;
+  if (deck || !p.deck) p.deck = SIM.validDeck(deck);
   room.slots[slot] = p;
   ws.ctx = { room, slot };
   room.lastActive = Date.now();
   send(ws, { t: 'joined', code: room.code, role: ROLES[slot], token });
   sendRoomInfo(room);
   if (room.phase === 'count' || room.phase === 'battle') sendState(room);
-  if (room.phase === 'end') send(ws, { t: 'end', cr: room.crowns, reason: 'tempo' });
+  if (room.phase === 'end' && room.result) send(ws, { t: 'end', ...room.result });
 }
 // connessione persa: il posto resta riservato (si può rientrare con il token)
 function detach(ws) {
@@ -241,7 +249,6 @@ function detach(ws) {
   sendRoomInfo(ctx.room);
 }
 
-// keepalive: chiude le connessioni morte
 setInterval(() => {
   for (const ws of wss.clients) {
     if (!ws.isAlive) { ws.terminate(); continue; }
@@ -249,4 +256,4 @@ setInterval(() => {
   }
 }, 15000);
 
-server.listen(PORT, () => console.log(`Arena Piazza Leonardo in ascolto su http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Bazoo Game in ascolto su http://localhost:${PORT}`));
