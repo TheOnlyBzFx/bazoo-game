@@ -1,0 +1,16 @@
+{
+  "name": "arena-piazza-leonardo",
+  "version": "0.1.0",
+  "description": "Gioco 1v1 in tempo reale stile Clash Royale ambientato a Piazza Leonardo (Milano)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.22.2"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}

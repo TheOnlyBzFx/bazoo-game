@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Arena Piazza Leonardo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<script src="vendor/three.min.js"></script>
+<style>
+  :root{
+    --blu:#2f7fe0; --blu-d:#1b4f99; --rosso:#e0413a; --rosso-d:#94221d;
+    --elisir:#d43bd6; --elisir-2:#ff7af5; --oro:#ffd23f;
+    --ui-bg:#2b2238; --ui-bg2:#3b2f4d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;background:#120e18;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;color:#fff;user-select:none;-webkit-user-select:none}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  #game{position:relative;height:100%;width:min(100vw, calc(100vh * 0.5625));overflow:hidden;background:#3c5a2c;box-shadow:0 0 60px rgba(0,0,0,.6)}
+  @media (max-aspect-ratio: 10/16){ #game{width:100vw} }
+  canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .font-g{font-family:'Lilita One','Nunito',sans-serif;letter-spacing:.5px}
+  .stroke{text-shadow:0 2px 0 #000,0 -1px 0 #000,1px 0 0 #000,-1px 0 0 #000,0 3px 6px rgba(0,0,0,.4)}
+
+  /* ---------- HUD in alto ---------- */
+  #hudTop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:8px 8px 0;pointer-events:none;z-index:5}
+  .nameplate{background:linear-gradient(180deg,rgba(20,14,30,.85),rgba(20,14,30,.65));border-radius:10px;padding:5px 10px;min-width:110px;border:2px solid rgba(255,255,255,.12)}
+  .nameplate .n{font-size:15px;line-height:1.1}
+  .nameplate .s{font-size:10.5px;opacity:.75;font-weight:800}
+  .nameplate.red .n{color:#ffb3ae}
+  #timerBox{background:linear-gradient(180deg,rgba(20,14,30,.88),rgba(20,14,30,.7));border-radius:10px;padding:4px 10px 5px;text-align:center;border:2px solid rgba(255,255,255,.12);min-width:92px}
+  #timerBox .l{font-size:10.5px;font-weight:800;opacity:.8}
+  #timer{font-size:24px;line-height:1}
+  #timer.urg{color:#ff6b5e}
+  #multBadge{display:none;margin-top:3px;font-size:13px;background:var(--elisir);border-radius:6px;padding:1px 6px;color:#fff}
+
+  /* corone */
+  #crowns{position:absolute;right:6px;top:27%;display:flex;flex-direction:column;gap:40px;z-index:5;pointer-events:none}
+  .crown{display:flex;align-items:center;gap:4px;background:rgba(20,14,30,.7);border-radius:20px;padding:3px 8px 3px 4px;border:2px solid rgba(255,255,255,.12)}
+  .crown svg{width:22px;height:18px}
+  .crown span{font-size:18px}
+
+  /* etichette torri */
+  #labels{position:absolute;inset:0;pointer-events:none;z-index:4}
+  .tl{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:1px}
+  .tl .hpn{font-size:11px;font-weight:900}
+  .tl .bar{width:52px;height:8px;border-radius:4px;background:rgba(0,0,0,.65);border:1.5px solid rgba(0,0,0,.8);overflow:hidden}
+  .tl .bar i{display:block;height:100%;width:100%}
+  .tl.king .bar{width:70px;height:9px}
+  .tl.king .who{font-size:12px;font-weight:900;padding:0 6px;border-radius:5px;background:rgba(0,0,0,.45);max-width:110px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .tl.me .bar i{background:linear-gradient(180deg,#7dc3ff,#2f7fe0)}
+  .tl.op .bar i{background:linear-gradient(180deg,#ff9a92,#e0413a)}
+
+  /* bolle emote */
+  .bubble{position:absolute;transform:translate(-50%,-100%) scale(.2);background:#fff;color:#222;font-weight:900;font-size:15px;padding:7px 12px;border-radius:14px;white-space:nowrap;box-shadow:0 4px 0 rgba(0,0,0,.25);z-index:6;pointer-events:none;opacity:0;transition:transform .18s cubic-bezier(.3,1.6,.6,1),opacity .15s}
+  .bubble.show{transform:translate(-50%,-100%) scale(1);opacity:1}
+  .bubble:after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-8px;border:8px solid transparent;border-top-color:#fff;border-bottom:0}
+
+  /* ---------- vassoio carte + elisir ---------- */
+  #tray{position:absolute;left:0;right:0;bottom:0;height:24%;min-height:150px;z-index:7;
+    background:linear-gradient(180deg,#4a3a5e 0%,#2f2540 18%,#241c31 100%);
+    border-top:3px solid #6b5687;box-shadow:0 -6px 18px rgba(0,0,0,.45);
+    display:flex;flex-direction:column;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+  #cardsRow{flex:1;display:flex;gap:6px;align-items:stretch;min-height:0}
+  #nextCol{width:15%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px}
+  #nextCol .lbl{font-size:10px;font-weight:900;opacity:.85;text-transform:uppercase}
+  .slot{position:relative;border-radius:9px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));border:2.5px dashed rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .slot .q{font-size:26px;opacity:.25}
+  #nextSlot{width:100%;aspect-ratio:3/4;max-height:70%}
+  #nextSlot .q{font-size:16px}
+  #hand{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  #hand .slot{height:100%}
+  #hand .slot .cost{position:absolute;left:3px;top:3px;width:20px;height:22px;border-radius:50% 50% 50% 50%/40% 40% 60% 60%;background:radial-gradient(circle at 40% 35%,var(--elisir-2),var(--elisir));font-size:12px;display:none;align-items:center;justify-content:center}
+
+  #elixirRow{height:30px;margin-top:7px;display:flex;align-items:center;gap:6px}
+  #dropWrap{position:relative;width:34px;height:38px;flex:none;margin-top:-6px}
+  #dropWrap svg{position:absolute;inset:0;width:100%;height:100%}
+  #elixirNum{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-top:7px;font-size:19px}
+  #bar{position:relative;flex:1;height:22px;border-radius:7px;background:#160f20;border:2px solid #0b0710;overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,.6)}
+  #barFill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(180deg,#ff9cf8 0%,#e14ae3 45%,#a823b0 100%)}
+  #barPart{position:absolute;top:0;bottom:0;width:0;background:linear-gradient(180deg,rgba(255,156,248,.55),rgba(168,35,176,.55))}
+  #barTicks{position:absolute;inset:0;display:grid;grid-template-columns:repeat(10,1fr)}
+  #barTicks i{border-right:2px solid rgba(11,7,16,.85)}
+  #barTicks i:last-child{border-right:0}
+  #bar.x2 #barFill{background:linear-gradient(180deg,#ffb0ff 0%,#ff5af0 45%,#c21ac9 100%)}
+
+  /* bottone emote + mia targhetta */
+  #meRow{position:absolute;left:8px;bottom:calc(24% + 8px);display:flex;align-items:flex-end;gap:8px;z-index:6}
+  @media (max-height:625px){ #meRow{bottom:158px} }
+  #emoteBtn{pointer-events:auto;width:44px;height:44px;border-radius:12px;border:2px solid rgba(255,255,255,.25);background:linear-gradient(180deg,#5a8be8,#2f5fb8);box-shadow:0 3px 0 #1a3a77;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  #emoteBtn svg{width:26px;height:26px}
+  #emoteMenu{position:absolute;left:0;bottom:52px;display:none;grid-template-columns:1fr 1fr;gap:6px;background:rgba(20,14,30,.92);padding:8px;border-radius:12px;border:2px solid rgba(255,255,255,.15);width:230px}
+  #emoteMenu.open{display:grid}
+  #emoteMenu button{font:900 13px 'Nunito';color:#222;background:#fff;border:0;border-radius:9px;padding:8px 6px;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.3)}
+  #emoteMenu button:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.3)}
+
+  /* banner centrali */
+  #banner{position:absolute;left:0;right:0;top:40%;text-align:center;z-index:8;pointer-events:none;opacity:0;transform:scale(.6);transition:all .25s cubic-bezier(.3,1.5,.6,1)}
+  #banner.show{opacity:1;transform:scale(1)}
+  #banner .big{font-size:44px;line-height:1}
+  #banner .sm{font-size:16px;margin-top:6px}
+  #countdown{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:9;pointer-events:none;font-size:110px}
+  #countdown.on{display:flex}
+
+  /* stato connessione */
+  #netPill{position:absolute;left:8px;top:58px;z-index:6;font-size:11px;font-weight:900;padding:3px 9px;border-radius:20px;background:rgba(20,14,30,.75);display:flex;align-items:center;gap:5px;pointer-events:auto;cursor:pointer;border:1.5px solid rgba(255,255,255,.12)}
+  #netPill i{width:8px;height:8px;border-radius:50%;background:#888}
+  #netPill.ok i{background:#4ade80;box-shadow:0 0 6px #4ade80}
+  #netPill.warn i{background:#fbbf24}
+  #netPill.bad i{background:#ef4444}
+  #debug{position:absolute;left:8px;top:82px;z-index:12;background:rgba(10,8,16,.92);border:1.5px solid rgba(255,255,255,.2);border-radius:10px;padding:8px 10px;font:700 11px/1.5 ui-monospace,monospace;display:none;min-width:220px}
+  #debug.open{display:block}
+  #debug label{display:flex;gap:6px;align-items:center;margin-top:4px;cursor:pointer}
+
+  /* ---------- schermate (lobby / fine) ---------- */
+  .screen{position:absolute;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;padding:22px;text-align:center;
+    background:radial-gradient(ellipse at 50% 20%,rgba(78,52,120,.92),rgba(18,12,28,.96) 70%)}
+  .screen.on{display:flex}
+  .title{font-size:38px;line-height:1;color:var(--oro)}
+  .subtitle{font-size:14px;opacity:.85;margin:8px 0 22px;font-weight:800}
+  .panel{width:100%;max-width:330px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .panel label{font-size:12px;font-weight:900;text-align:left;opacity:.85}
+  .inp{width:100%;font:800 16px 'Nunito';padding:10px 12px;border-radius:10px;border:2px solid rgba(255,255,255,.18);background:rgba(0,0,0,.35);color:#fff;outline:none;user-select:text;-webkit-user-select:text}
+  .inp:focus{border-color:var(--oro)}
+  .btn{font:20px 'Lilita One';letter-spacing:.5px;border:0;border-radius:12px;padding:12px 14px;cursor:pointer;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.35);transition:transform .06s}
+  .btn:active{transform:translateY(3px)}
+  .btn.y{background:linear-gradient(180deg,#ffd75a,#f2a51c);color:#4a2a00;text-shadow:0 1px 0 rgba(255,255,255,.4);box-shadow:0 4px 0 #a5680b}
+  .btn.b{background:linear-gradient(180deg,#5fa2ff,#2f6fd6);box-shadow:0 4px 0 #1b4590}
+  .btn.g{background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.08));box-shadow:0 4px 0 rgba(0,0,0,.35);font-size:16px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .row{display:flex;gap:8px}
+  .row .inp{flex:1;text-transform:lowercase}
+  .code{font-size:46px;color:var(--oro);letter-spacing:4px;margin:4px 0}
+  .linkbox{font:700 11px ui-monospace,monospace;background:rgba(0,0,0,.4);border-radius:8px;padding:8px;word-break:break-all;user-select:text;-webkit-user-select:text;text-align:left}
+  .hint{font-size:12px;opacity:.8;font-weight:700;line-height:1.4}
+  .status{font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;gap:8px}
+  .spin{width:14px;height:14px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:var(--oro);animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .err{color:#ffb3ae;font-size:12.5px;font-weight:800;line-height:1.4}
+  #endScreen .res{font-size:48px;margin-bottom:6px}
+  #endScreen .crowns-big{display:flex;gap:30px;justify-content:center;margin:12px 0 22px;font-size:22px}
+  #toast{position:absolute;left:50%;bottom:28%;transform:translateX(-50%);background:rgba(0,0,0,.85);padding:8px 14px;border-radius:10px;font-weight:900;font-size:13px;z-index:30;display:none;white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="game">
+  <canvas id="c"></canvas>
+  <div id="labels"></div>
+
+  <div id="hudTop">
+    <div class="nameplate red"><div class="n font-g stroke" id="opName">Avversario</div><div class="s" id="opSub">in attesa…</div></div>
+    <div id="timerBox"><div class="l" id="timerLbl">Tempo rimasto</div><div id="timer" class="font-g stroke">3:00</div><div id="multBadge" class="font-g">x2</div></div>
+  </div>
+  <div id="netPill" title="Dettagli connessione"><i></i><span id="netTxt">offline</span></div>
+  <div id="debug"></div>
+
+  <div id="crowns">
+    <div class="crown"><svg viewBox="0 0 24 20"><path d="M2 17h20l-2-11-5 5-3-8-3 8-5-5z" fill="#e0413a" stroke="#000" stroke-width="1.5"/></svg><span class="font-g stroke" id="crOp">0</span></div>
+    <div class="crown"><svg viewBox="0 0 24 20"><path d="M2 17h20l-2-11-5 5-3-8-3 8-5-5z" fill="#2f7fe0" stroke="#000" stroke-width="1.5"/></svg><span class="font-g stroke" id="crMe">0</span></div>
+  </div>
+
+  <div id="meRow">
+    <div id="emoteBtn" title="Emote"><svg viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H10l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="#fff"/><circle cx="8.5" cy="10.5" r="1.4" fill="#2f5fb8"/><circle cx="15.5" cy="10.5" r="1.4" fill="#2f5fb8"/></svg></div>
+    <div id="emoteMenu"></div>
+  </div>
+
+  <div id="banner"><div class="big font-g stroke" id="bannerBig"></div><div class="sm font-g stroke" id="bannerSm"></div></div>
+  <div id="countdown" class="font-g stroke"></div>
+
+  <div id="tray">
+    <div id="cardsRow">
+      <div id="nextCol"><div class="lbl">Prossima</div><div class="slot" id="nextSlot"><span class="q font-g">?</span></div></div>
+      <div id="hand">
+        <div class="slot"><span class="cost font-g"></span><span class="q font-g">?</span></div>
+        <div class="slot"><span class="cost font-g"></span><span class="q font-g">?</span></div>
+        <div class="slot"><span class="cost font-g"></span><span class="q font-g">?</span></div>
+        <div class="slot"><span class="cost font-g"></span><span class="q font-g">?</span></div>
+      </div>
+    </div>
+    <div id="elixirRow">
+      <div id="dropWrap">
+        <svg viewBox="0 0 34 38"><defs><radialGradient id="dg" cx="40%" cy="55%" r="65%"><stop offset="0" stop-color="#ffb3fb"/><stop offset=".55" stop-color="#e14ae3"/><stop offset="1" stop-color="#8d1a95"/></radialGradient></defs>
+          <path d="M17 2 C17 2 4 17 4 25 a13 12 0 0 0 26 0 C30 17 17 2 17 2z" fill="url(#dg)" stroke="#2a0b2e" stroke-width="2.2"/>
+          <ellipse cx="12" cy="20" rx="3" ry="5" fill="#fff" opacity=".45" transform="rotate(20 12 20)"/></svg>
+        <div id="elixirNum" class="font-g stroke">5</div>
+      </div>
+      <div id="bar"><div id="barFill"></div><div id="barPart"></div><div id="barTicks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+    </div>
+  </div>
+
+  <!-- LOBBY -->
+  <div class="screen on" id="lobby">
+    <div class="title font-g stroke">Arena<br>Piazza Leonardo</div>
+    <div class="subtitle">Sfida 1 contro 1 in tempo reale</div>
+    <div class="panel" id="lobbyMain">
+      <label for="nick">Il tuo nome</label>
+      <input class="inp" id="nick" maxlength="16" placeholder="es. Pietro" autocomplete="off">
+      <button class="btn y" id="btnCreate">Crea partita</button>
+      <div class="row"><input class="inp" id="codeIn" maxlength="12" placeholder="codice partita" autocomplete="off"><button class="btn b" id="btnJoin" style="font-size:17px">Entra</button></div>
+      <button class="btn g" id="btnSolo">Prova l'arena da solo</button>
+      <div class="err" id="lobbyErr"></div>
+    </div>
+    <div class="panel" id="lobbyWait" style="display:none">
+      <div class="hint" id="waitHead">Codice partita</div>
+      <div class="code font-g stroke" id="waitCode">-----</div>
+      <div id="shareBlock">
+        <div class="hint" style="margin-bottom:6px">Manda questo link al tuo amico:</div>
+        <div class="linkbox" id="linkBox"></div>
+        <button class="btn b" id="btnCopy" style="width:100%;margin-top:8px;font-size:17px">Copia link</button>
+      </div>
+      <div class="status" id="waitStatus"><div class="spin"></div><span>In attesa dell'avversario…</span></div>
+      <button class="btn g" id="btnLeave">Annulla</button>
+    </div>
+  </div>
+
+  <!-- FINE PARTITA -->
+  <div class="screen" id="endScreen">
+    <div class="res font-g stroke" id="endRes">Pareggio</div>
+    <div class="hint" id="endSub"></div>
+    <div class="crowns-big font-g stroke"><div style="color:#7dc3ff" id="endMe">Tu · 0</div><div style="color:#ff9a92" id="endOp">Avv. · 0</div></div>
+    <div class="panel">
+      <button class="btn y" id="btnRematch">Rivincita</button>
+      <div class="status" id="rematchStatus" style="display:none"></div>
+      <button class="btn g" id="btnExit">Torna alla lobby</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div></div>
+
+<script>
+(() => {
+'use strict';
+// =====================================================================
+//  CONFIGURAZIONE (valori predefiniti: quelli veri arrivano dal server)
+// =====================================================================
+const CFG = {
+  W: 18, H: 32,                // griglia arena in caselle (come CR)
+  ELIXIR_START: 5,
+  ELIXIR_MAX: 10,
+  ELIXIR_MS: 2800,             // 1 elisir ogni 2,8 s (x1)
+  REG_MS: 180000,              // 3:00 tempo regolamentare
+  X2_AT: 120000,               // ultimo minuto: elisir x2
+  OT_MS: 120000,               // supplementare 2:00
+  OT_X3_AT: 60000,             // ultimo minuto di supplementare: x3
+  COUNTDOWN_MS: 3000,
+  KING_HP: 4824, PRINCESS_HP: 3052
+};
+
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+const lsSet = (k,v) => { try { localStorage.setItem(k,v); } catch(e){} };
+const ssGet = k => { try { return sessionStorage.getItem(k); } catch(e){ return null; } };
+const ssSet = (k,v) => { try { sessionStorage.setItem(k,v); } catch(e){} };
+
+// =====================================================================
+//  SCENA 3D
+// =====================================================================
+const canvas = $('c');
+const gameEl = $('game');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9fd3f0);
+scene.fog = new THREE.Fog(0x9fd3f0, 70, 120);
+
+const camera = new THREE.PerspectiveCamera(34, 9/16, 0.5, 300);
+
+// luci
+scene.add(new THREE.HemisphereLight(0xfff4dc, 0x6b6248, 0.72));
+const sun = new THREE.DirectionalLight(0xfff0d0, 0.95);
+sun.position.set(-14, 34, 12);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -26, right: 26, top: 30, bottom: -30, near: 1, far: 90 });
+sun.shadow.bias = -0.0008;
+scene.add(sun);
+
+// ---- texture procedurali ------------------------------------------------
+function canvasTex(w, h, draw, repX = 1, repY = 1) {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const g = cv.getContext('2d'); draw(g, w, h);
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repX, repY);
+  t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+  return t;
+}
+function speckle(g, w, h, n, cols, size = 1.6) {
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = cols[(Math.random() * cols.length) | 0];
+    g.globalAlpha = 0.25 + Math.random() * 0.5;
+    const s = Math.random() * size + 0.4;
+    g.fillRect(Math.random() * w, Math.random() * h, s, s);
+  }
+  g.globalAlpha = 1;
+}
+// pavimento "nocciola chiaro" (calcestruzzo architettonico della piazza), lastre 2x1 caselle
+const pavingTex = canvasTex(512, 512, (g, w, h) => {
+  g.fillStyle = '#d9c4a0'; g.fillRect(0, 0, w, h);
+  // lastre: 4 colonne x 8 righe => ogni lastra = 2 caselle x 1 casella se repeat (W/8, H/8)
+  const cw = w / 4, rh = h / 8;
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 4; c++) {
+    const off = (r % 2) ? cw / 2 : 0;
+    const v = (Math.random() * 14 - 7) | 0;
+    g.fillStyle = `rgb(${217 + v},${196 + v},${160 + v})`;
+    g.fillRect(c * cw + off, r * rh, cw, rh);
+    if (off) g.fillRect(-cw / 2, r * rh, cw, rh);
+  }
+  speckle(g, w, h, 9000, ['#b9a07a', '#efe0c4', '#a88f6a', '#c8b18c', '#8a7658'], 2);
+  g.strokeStyle = 'rgba(110,88,58,.55)'; g.lineWidth = 2.5;
+  for (let r = 0; r <= 8; r++) { g.beginPath(); g.moveTo(0, r * rh); g.lineTo(w, r * rh); g.stroke(); }
+  for (let r = 0; r < 8; r++) {
+    const off = (r % 2) ? cw / 2 : 0;
+    for (let c = 0; c <= 4; c++) { const x = c * cw + off; g.beginPath(); g.moveTo(x, r * rh); g.lineTo(x, (r + 1) * rh); g.stroke(); }
+  }
+}, CFG.W / 8, CFG.H / 8);
+// pietra chiara (percorsi / ponti)
+const stoneTex = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#e7dcc6'; g.fillRect(0, 0, w, h);
+  speckle(g, w, h, 4000, ['#cbbd9f', '#f6efe0', '#b4a586'], 2);
+  g.strokeStyle = 'rgba(120,100,70,.4)'; g.lineWidth = 2;
+  for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(0, i * h / 4); g.lineTo(w, i * h / 4); g.stroke(); }
+  for (let r = 0; r < 4; r++) for (let c = 0; c <= 2; c++) { const x = c * w / 2 + (r % 2 ? w / 4 : 0); g.beginPath(); g.moveTo(x, r * h / 4); g.lineTo(x, (r + 1) * h / 4); g.stroke(); }
+});
+const grassTex = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#5f9a3c'; g.fillRect(0, 0, w, h);
+  speckle(g, w, h, 9000, ['#4f8a30', '#73b04a', '#6aa443', '#447a2a', '#86c058'], 2.4);
+}, 12, 12);
+const brickTex = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#e2cfb2'; g.fillRect(0, 0, w, h);
+  const bh = h / 16, bw = w / 6;
+  for (let r = 0; r < 16; r++) for (let c = -1; c < 7; c++) {
+    const x = c * bw + (r % 2 ? bw / 2 : 0);
+    const v = (Math.random() * 30 - 15) | 0;
+    g.fillStyle = `rgb(${178 + v},${82 + v * .6},${54 + v * .4})`;
+    g.fillRect(x + 1.5, r * bh + 1.5, bw - 3, bh - 3);
+  }
+  speckle(g, w, h, 2500, ['#7c3422', '#d58a62', '#5e2a1c'], 1.5);
+});
+const waterTex = canvasTex(256, 256, (g, w, h) => {
+  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#3fa7c9'); gr.addColorStop(1, '#2b86b0');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2.2;
+  for (let i = 0; i < 26; i++) {
+    const x = Math.random() * w, y = Math.random() * h, l = 14 + Math.random() * 26;
+    g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + l / 2, y - 4, x + l, y); g.stroke();
+  }
+}, 6, 1);
+
+const M = {
+  paving: new THREE.MeshLambertMaterial({ map: pavingTex }),
+  stone: new THREE.MeshLambertMaterial({ map: stoneTex }),
+  stonePlain: new THREE.MeshLambertMaterial({ color: 0xd8ccb2 }),
+  grass: new THREE.MeshLambertMaterial({ map: grassTex }),
+  brick: new THREE.MeshLambertMaterial({ map: brickTex }),
+  water: new THREE.MeshLambertMaterial({ map: waterTex, transparent: true, opacity: 0.93 }),
+  dark: new THREE.MeshLambertMaterial({ color: 0x2a2320 }),
+  iron: new THREE.MeshLambertMaterial({ color: 0x2f4a3a }),
+  wood: new THREE.MeshLambertMaterial({ color: 0x8a5a33 }),
+  trunk: new THREE.MeshLambertMaterial({ color: 0xb8a785 }),
+  hedge: new THREE.MeshLambertMaterial({ color: 0x3f7a2e }),
+  gold: new THREE.MeshLambertMaterial({ color: 0xf2c341 }),
+  white: new THREE.MeshLambertMaterial({ color: 0xf4efe6 }),
+  facade: new THREE.MeshLambertMaterial({ color: 0xe6d3ad }),
+  facadeD: new THREE.MeshLambertMaterial({ color: 0xcdb68c }),
+  window: new THREE.MeshLambertMaterial({ color: 0x3a4a5a }),
+  roof: new THREE.MeshLambertMaterial({ color: 0x9a5b45 })
+};
+const leafMats = [0x4e8f36, 0x5fa43f, 0x6db349, 0x3f7d2c].map(c => new THREE.MeshLambertMaterial({ color: c }));
+
+function box(w, h, d, mat, x = 0, y = 0, z = 0, parent = scene, shadow = true) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z); m.castShadow = shadow; m.receiveShadow = true;
+  parent.add(m); return m;
+}
+// coordinate: casella (tx,ty) con ty=0 sul fondo del giocatore "host"
+const T2W = (tx, ty) => ({ x: tx - CFG.W / 2, z: CFG.H / 2 - ty });
+
+// ---- terreno -------------------------------------------------------------
+const env = new THREE.Group(); scene.add(env);
+{
+  // prato esterno (giardino della piazza)
+  for (const s of [1, -1]) {
+    const g = new THREE.Mesh(new THREE.PlaneGeometry(140, 70), M.grass);
+    g.rotation.x = -Math.PI / 2; g.position.set(0, -0.02, s * 36); g.receiveShadow = true; env.add(g);
+  }
+
+  // pavimentazione arena: due metà (il fiume occupa le caselle 15-17)
+  for (const s of [1, -1]) {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(CFG.W, 15), M.paving);
+    p.rotation.x = -Math.PI / 2; p.position.set(0, 0, s * 8.5); p.receiveShadow = true;
+    // allinea la texture alla griglia
+    const tx = pavingTex.clone(); tx.needsUpdate = true; tx.repeat.set(CFG.W / 8, 15 / 8);
+    p.material = new THREE.MeshLambertMaterial({ map: tx });
+    env.add(p);
+  }
+  // corsie in pietra chiara (dalle torri ai ponti) e viale centrale verso il re
+  const lane = (x, z, w, d) => {
+    const t = stoneTex.clone(); t.needsUpdate = true; t.repeat.set(w / 2, d / 2);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshLambertMaterial({ map: t }));
+    m.rotation.x = -Math.PI / 2; m.position.set(x, 0.01, z); m.receiveShadow = true; env.add(m);
+  };
+  for (const s of [1, -1]) {
+    lane(-5.5, s * 5.0, 3, 8);     // corsia sinistra (dal ponte alla torre)
+    lane(5.5, s * 5.0, 3, 8);      // corsia destra
+    lane(0, s * 12.2, 3.2, 6.6);   // viale del re
+    lane(0, s * 9.4, 14, 1.4);     // traversa tra le torri
+  }
+  // bordo dell'arena: cordolo in granito + siepe
+  const curbMat = new THREE.MeshLambertMaterial({ color: 0xa79f92 });
+  box(0.4, 0.35, CFG.H + 0.8, curbMat, -CFG.W / 2 - 0.2, 0.17, 0, env);
+  box(0.4, 0.35, CFG.H + 0.8, curbMat, CFG.W / 2 + 0.2, 0.17, 0, env);
+  box(CFG.W + 0.8, 0.35, 0.4, curbMat, 0, 0.17, -CFG.H / 2 - 0.2, env);
+  box(CFG.W + 0.8, 0.35, 0.4, curbMat, 0, 0.17, CFG.H / 2 + 0.2, env);
+  for (const s of [-1, 1]) {
+    for (const zs of [1, -1]) {
+      box(0.9, 0.8, 14.2, M.hedge, s * (CFG.W / 2 + 0.95), 0.4, zs * 8.9, env);
+    }
+    box(CFG.W + 2.8, 0.8, 0.9, M.hedge, 0, 0.4, s * (CFG.H / 2 + 0.95), env);
+  }
+}
+
+// ---- fiume (canale d'acqua) con 2 ponti -----------------------------------
+const waterMeshes = [];
+{
+  const RIV_D = 2;  // 2 caselle
+  // letto del canale
+  box(70, 0.1, RIV_D, new THREE.MeshLambertMaterial({ color: 0x24627d }), 0, -0.55, 0, env, false);
+  const w = new THREE.Mesh(new THREE.PlaneGeometry(70, RIV_D), M.water);
+  w.rotation.x = -Math.PI / 2; w.position.y = -0.22; env.add(w); waterMeshes.push(w);
+  // sponde in pietra
+  const bankMat = new THREE.MeshLambertMaterial({ map: stoneTex });
+  for (const s of [1, -1]) {
+    box(70, 0.62, 0.22, bankMat, 0, -0.27, s * (RIV_D / 2 + 0.11), env);
+    box(70, 0.08, 0.5, M.stonePlain, 0, 0.04, s * (RIV_D / 2 + 0.25), env);
+  }
+  // ponti (3 caselle di larghezza, centrati sulle corsie)
+  for (const x of [-5.5, 5.5]) {
+    const br = new THREE.Group(); br.position.x = x; env.add(br);
+    const t = stoneTex.clone(); t.needsUpdate = true; t.repeat.set(1.5, 1.4);
+    const deckMat = new THREE.MeshLambertMaterial({ map: t });
+    box(3, 0.24, RIV_D + 1.0, deckMat, 0, 0.08, 0, br);
+    // parapetti in ferro battuto verde (stile milanese)
+    for (const s of [-1, 1]) {
+      box(0.12, 0.42, RIV_D + 1.0, M.iron, s * 1.44, 0.41, 0, br);
+      for (const pz of [-(RIV_D + 1) / 2, (RIV_D + 1) / 2]) box(0.28, 0.65, 0.28, M.stonePlain, s * 1.44, 0.45, pz, br);
+    }
+  }
+}
+
+// ---- alberi, panchine, lampioni -----------------------------------------
+function tree(x, z, s = 1) {
+  const t = new THREE.Group(); t.position.set(x, 0, z); t.scale.setScalar(s);
+  const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, 2.6, 7), M.trunk);
+  tr.position.y = 1.3; tr.castShadow = true; t.add(tr);
+  const n = 4 + ((Math.random() * 3) | 0);
+  for (let i = 0; i < n; i++) {
+    const r = 1.1 + Math.random() * 0.7;
+    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), leafMats[(Math.random() * leafMats.length) | 0]);
+    b.position.set((Math.random() - .5) * 1.8, 3.1 + Math.random() * 1.4, (Math.random() - .5) * 1.8);
+    b.castShadow = true; t.add(b);
+  }
+  env.add(t); return t;
+}
+function bench(x, z, rotY = 0) {
+  const b = new THREE.Group(); b.position.set(x, 0, z); b.rotation.y = rotY; env.add(b);
+  box(1.6, 0.08, 0.45, M.wood, 0, 0.45, 0, b);
+  box(1.6, 0.35, 0.07, M.wood, 0, 0.7, -0.2, b);
+  for (const s of [-.65, .65]) box(0.08, 0.45, 0.4, M.iron, s, 0.22, 0, b);
+}
+function lamp(x, z) {
+  const l = new THREE.Group(); l.position.set(x, 0, z); env.add(l);
+  const p = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.11, 3.4, 8), M.iron); p.position.y = 1.7; p.castShadow = true; l.add(p);
+  box(0.36, 0.45, 0.36, new THREE.MeshLambertMaterial({ color: 0xfff1b8, emissive: 0x6b5a20 }), 0, 3.55, 0, l);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.3, 4), M.iron); cap.position.y = 3.92; cap.rotation.y = Math.PI / 4; l.add(cap);
+}
+{
+  // filari di platani nel giardino ai lati dell'arena
+  for (let z = -26; z <= 26; z += 4.2) {
+    if (Math.abs(z) < 2.2) continue;
+    tree(-12.6 + (Math.random() - .5), z + (Math.random() - .5), 0.95 + Math.random() * 0.25);
+    tree(12.6 + (Math.random() - .5), z + (Math.random() - .5), 0.95 + Math.random() * 0.25);
+    tree(-18 + (Math.random() - .5) * 2, z + 2, 1.1);
+    tree(18 + (Math.random() - .5) * 2, z + 2, 1.1);
+  }
+  for (const z of [-12, -4, 4, 12]) { bench(-10.4, z, Math.PI / 2); bench(10.4, z, -Math.PI / 2); }
+  for (const z of [-16.5, -8, 8, 16.5]) { lamp(-9.9, z); lamp(9.9, z); }
+  // vialetti nel giardino
+  const path = (x, z, w, d) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), M.stone); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.0, z); m.receiveShadow = true; env.add(m); };
+  path(-10.6, 0, 1.4, 60); path(10.6, 0, 1.4, 60);
+  path(0, -20.5, 40, 4); path(0, 20.5, 40, 3);
+}
+
+// ---- Politecnico (facciata principale) sul lato lontano --------------------
+{
+  const P = new THREE.Group(); P.position.set(0, 0, -25.5); env.add(P);
+  const FW = 46, FH = 11, FD = 6;
+  box(FW, FH, FD, M.facade, 0, FH / 2, 0, P);
+  box(FW + 0.6, 0.6, FD + 0.6, M.facadeD, 0, FH + 0.3, 0, P);        // cornicione
+  box(FW + 0.4, 1.2, FD + 0.4, M.facadeD, 0, 0.6, 0, P);              // zoccolo
+  // corpo centrale avanzato con portico
+  box(16, FH + 1.6, 2.2, M.facade, 0, (FH + 1.6) / 2, FD / 2 + 1.1, P);
+  box(16.6, 0.7, 2.8, M.facadeD, 0, FH + 1.95, FD / 2 + 1.1, P);
+  for (let i = 0; i < 6; i++) {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 6.5, 12), M.white);
+    c.position.set(-6.25 + i * 2.5, 4.45, FD / 2 + 3.0); c.castShadow = true; P.add(c);
+    box(1.1, 0.5, 1.1, M.facadeD, -6.25 + i * 2.5, 7.95, FD / 2 + 3.0, P);
+    box(1.1, 0.6, 1.1, M.facadeD, -6.25 + i * 2.5, 1.5, FD / 2 + 3.0, P);
+  }
+  box(15, 0.9, 1.6, M.facadeD, 0, 8.55, FD / 2 + 3.0, P);              // trabeazione
+  box(16, 1.2, 4.5, M.stonePlain, 0, 0.6, FD / 2 + 3.4, P);            // scalinata
+  box(3.2, 4.6, 0.2, M.dark, 0, 3.5, FD / 2 + 2.25, P);                // portone
+  // finestre
+  for (let fl = 0; fl < 3; fl++) for (let i = -10; i <= 10; i++) {
+    if (Math.abs(i) <= 3) continue;
+    box(1.0, 1.7, 0.15, M.window, i * 2.1, 2.6 + fl * 3.0, FD / 2 + 0.03, P, false);
+    box(1.3, 0.18, 0.3, M.facadeD, i * 2.1, 1.7 + fl * 3.0, FD / 2 + 0.1, P, false);
+  }
+  for (let fl = 0; fl < 2; fl++) for (const i of [-2, 0, 2]) box(1.1, 1.8, 0.15, M.window, i * 2.4, 9.8 + fl * -0.0 + fl * 0, FD / 2 + 2.23, P, false);
+  // tetto
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(FW, 1.5, FD - 1), M.roof); roof.position.set(0, FH + 1.2, -0.5); P.add(roof);
+  // ali laterali
+  box(9, 9, 18, M.facade, -FW / 2 + 4.5, 4.5, 10, P);
+  box(9, 9, 18, M.facade, FW / 2 - 4.5, 4.5, 10, P);
+  for (const s of [-1, 1]) for (let fl = 0; fl < 2; fl++) for (let k = 0; k < 6; k++)
+    box(0.15, 1.6, 1.0, M.window, s * (FW / 2 - 9.05), 2.6 + fl * 3.0, 3 + k * 2.6, P, false);
+}
+
+// ---- torri (stile mattoni milanesi con merli a coda di rondine) ------------
+const merlonGeo = (() => {
+  const w = 0.42, h = 0.55, n = 0.2, s = new THREE.Shape();
+  s.moveTo(-w / 2, 0); s.lineTo(w / 2, 0); s.lineTo(w / 2, h); s.lineTo(0, h - n); s.lineTo(-w / 2, h); s.lineTo(-w / 2, 0);
+  const g = new THREE.ExtrudeGeometry(s, { depth: 0.22, bevelEnabled: false }); g.translate(0, 0, -0.11); return g;
+})();
+function crenellate(parent, size, y, perSide) {
+  const half = size / 2 - 0.12;
+  for (let side = 0; side < 4; side++) {
+    for (let i = 0; i < perSide; i++) {
+      const t = (i + 0.5) / perSide * size - size / 2;
+      const m = new THREE.Mesh(merlonGeo, M.brick); m.castShadow = true;
+      const a = side * Math.PI / 2;
+      m.position.set(Math.cos(a) * half - Math.sin(a) * t, y, Math.sin(a) * half + Math.cos(a) * t);
+      m.rotation.y = -a + Math.PI / 2;
+      parent.add(m);
+    }
+  }
+}
+function banner(parent, mat, w, h, x, y, z, rotY) {
+  const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = rotY; parent.add(g);
+  const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(w / 2, -h); sh.lineTo(0, -h - w * 0.35); sh.lineTo(-w / 2, -h); sh.lineTo(-w / 2, 0);
+  const m = new THREE.Mesh(new THREE.ShapeGeometry(sh), mat); g.add(m);
+  const em = new THREE.Mesh(new THREE.CircleGeometry(w * 0.26, 20), M.gold); em.position.set(0, -h * 0.45, 0.01); g.add(em);
+  const em2 = new THREE.Mesh(new THREE.CircleGeometry(w * 0.15, 20), mat); em2.position.set(0, -h * 0.45, 0.02); g.add(em2);
+  box(w + 0.12, 0.08, 0.08, M.gold, 0, 0, 0.02, g, false);
+}
+function flag(parent, mat, y, h = 1.3, x = 0, z = 0) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); parent.add(g);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, h, 6), M.dark); pole.position.y = y + h / 2; g.add(pole);
+  const geo = new THREE.PlaneGeometry(0.75, 0.45, 6, 1); geo.translate(0.375, 0, 0);
+  const f = new THREE.Mesh(geo, mat);
+  f.position.set(0, y + h - 0.25, 0); g.add(f); flags.push(f);
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), M.gold); ball.position.y = y + h + 0.05; g.add(ball);
+}
+const flags = [];
+function makeTeamMats() {
+  return { cloth: new THREE.MeshLambertMaterial({ color: 0x2f7fe0, side: THREE.DoubleSide }), roof: new THREE.MeshLambertMaterial({ color: 0x2f7fe0 }) };
+}
+function princessTower(teamMats) {
+  const t = new THREE.Group();
+  box(2.95, 0.4, 2.95, M.stonePlain, 0, 0.2, 0, t);
+  box(2.55, 2.6, 2.55, M.brick, 0, 1.7, 0, t);
+  box(2.8, 0.2, 2.8, M.stonePlain, 0, 3.08, 0, t);
+  box(2.62, 0.35, 2.62, M.brick, 0, 3.35, 0, t);
+  crenellate(t, 2.62, 3.5, 4);
+  // finestre ad arco (feritoie)
+  for (const s of [1, -1]) {
+    box(0.4, 0.75, 0.06, M.dark, 0, 2.3, s * 1.29, t, false);
+    banner(t, teamMats.cloth, 0.9, 1.0, 0.85 * s, 2.9, s * 1.3, s > 0 ? 0 : Math.PI);
+    banner(t, teamMats.cloth, 0.9, 1.0, -0.85 * s, 2.9, s * 1.3, s > 0 ? 0 : Math.PI);
+  }
+  // piattaforma del difensore
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.6, 0.2, 14), new THREE.MeshLambertMaterial({ color: 0x8f8270 })); pad.position.y = 3.6; t.add(pad);
+  flag(t, teamMats.cloth, 3.4, 1.4, -1.0, -1.0);
+  return t;
+}
+function kingTower(teamMats) {
+  const t = new THREE.Group();
+  box(3.95, 0.45, 3.95, M.stonePlain, 0, 0.22, 0, t);
+  box(3.5, 2.5, 3.5, M.brick, 0, 1.7, 0, t);
+  box(3.8, 0.22, 3.8, M.stonePlain, 0, 3.02, 0, t);
+  box(3.58, 0.38, 3.58, M.brick, 0, 3.3, 0, t);
+  crenellate(t, 3.58, 3.47, 6);
+  // torretta centrale (ispirata alle torri dei castelli lombardi)
+  box(1.7, 1.6, 1.7, M.brick, 0, 4.3, 0, t);
+  box(1.95, 0.16, 1.95, M.stonePlain, 0, 5.15, 0, t);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(1.35, 1.5, 4), teamMats.roof); roof.rotation.y = Math.PI / 4; roof.position.y = 6.0; roof.castShadow = true; t.add(roof);
+  // orologio
+  for (const s of [1, -1]) {
+    const cl = new THREE.Mesh(new THREE.CircleGeometry(0.42, 24), M.white); cl.position.set(0, 4.45, s * 0.86); cl.rotation.y = s > 0 ? 0 : Math.PI; t.add(cl);
+    const rim = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 24), M.gold); rim.position.copy(cl.position); rim.position.z += s * 0.005; rim.rotation.y = cl.rotation.y; t.add(rim);
+    box(0.05, 0.3, 0.02, M.dark, 0, 4.55, s * 0.875, t, false);
+    // portone + stendardi
+    box(1.0, 1.3, 0.06, M.dark, 0, 1.1, s * 1.76, t, false);
+    banner(t, teamMats.cloth, 0.95, 1.25, 1.15, 2.85, s * 1.77, s > 0 ? 0 : Math.PI);
+    banner(t, teamMats.cloth, 0.95, 1.25, -1.15, 2.85, s * 1.77, s > 0 ? 0 : Math.PI);
+  }
+  flag(t, teamMats.cloth, 6.65, 1.1);
+  return t;
+}
+
+// lato "host" in basso (ty piccoli) e "guest" in alto nelle coordinate di partita
+const TOWERS = [
+  { id: 'hK', side: 'host', kind: 'king', tx: 9, ty: 3, size: 4 },
+  { id: 'hL', side: 'host', kind: 'princess', tx: 3.5, ty: 6.5, size: 3 },
+  { id: 'hR', side: 'host', kind: 'princess', tx: 14.5, ty: 6.5, size: 3 },
+  { id: 'gK', side: 'guest', kind: 'king', tx: 9, ty: 29, size: 4 },
+  { id: 'gL', side: 'guest', kind: 'princess', tx: 14.5, ty: 25.5, size: 3 },
+  { id: 'gR', side: 'guest', kind: 'princess', tx: 3.5, ty: 25.5, size: 3 }
+];
+const teamMat = { me: makeTeamMats(), op: makeTeamMats() };
+teamMat.op.cloth.color.set(0xe0413a); teamMat.op.roof.color.set(0xe0413a);
+const towerGroup = new THREE.Group(); scene.add(towerGroup);
+
+// stato condiviso della partita
+const S = {
+  mode: 'none',        // none | solo | online
+  role: 'host',        // host | guest  (guest vede l'arena ruotata)
+  phase: 'idle',       // idle | wait | count | battle | end
+  clock: 0,            // ms dall'inizio battaglia (negativo durante il conto alla rovescia)
+  elixir: CFG.ELIXIR_START,
+  towers: {},          // id -> {hp, max}
+  crowns: { host: 0, guest: 0 },
+  nick: 'Giocatore', opNick: 'Avversario',
+  code: null
+};
+
+// la vista: ognuno vede il proprio lato in basso
+const viewXZ = (tx, ty) => {
+  const w = T2W(tx, ty);
+  return S.role === 'guest' ? { x: -w.x, z: -w.z } : w;
+};
+const towerMeshes = {};
+function buildTowers() {
+  while (towerGroup.children.length) towerGroup.remove(towerGroup.children[0]);
+  flags.length = 0;
+  for (const T of TOWERS) {
+    const mine = T.side === S.role;
+    const mats = mine ? teamMat.me : teamMat.op;
+    const m = T.kind === 'king' ? kingTower(mats) : princessTower(mats);
+    const p = viewXZ(T.tx, T.ty);
+    m.position.set(p.x, 0, p.z);
+    m.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    towerGroup.add(m);
+    towerMeshes[T.id] = m;
+  }
+  // il vento muove le bandiere sempre nello stesso verso
+  buildLabels();
+}
+
+// ---- etichette HP sopra le torri -----------------------------------------
+const labelsEl = $('labels');
+const labelEls = {};
+function buildLabels() {
+  labelsEl.innerHTML = '';
+  for (const T of TOWERS) {
+    const mine = T.side === S.role;
+    const d = document.createElement('div');
+    d.className = 'tl ' + (T.kind === 'king' ? 'king ' : '') + (mine ? 'me' : 'op');
+    d.innerHTML = (T.kind === 'king' ? '<div class="who font-g stroke"></div>' : '') + '<div class="hpn stroke"></div><div class="bar"><i></i></div>';
+    labelsEl.appendChild(d);
+    labelEls[T.id] = d;
+  }
+  // bolle emote
+  for (const k of ['me', 'op']) { const b = document.createElement('div'); b.className = 'bubble'; b.id = 'bub_' + k; labelsEl.appendChild(b); }
+  refreshLabels();
+}
+function refreshLabels() {
+  for (const T of TOWERS) {
+    const el = labelEls[T.id]; if (!el) continue;
+    const st = S.towers[T.id] || { hp: T.kind === 'king' ? CFG.KING_HP : CFG.PRINCESS_HP, max: T.kind === 'king' ? CFG.KING_HP : CFG.PRINCESS_HP };
+    el.querySelector('.hpn').textContent = st.hp;
+    el.querySelector('.bar i').style.width = (100 * st.hp / st.max) + '%';
+    const who = el.querySelector('.who');
+    if (who) who.textContent = T.side === S.role ? S.nick : S.opNick;
+  }
+}
+const _v = new THREE.Vector3();
+function placeLabels() {
+  const r = gameEl.getBoundingClientRect();
+  for (const T of TOWERS) {
+    const el = labelEls[T.id]; if (!el) continue;
+    const p = viewXZ(T.tx, T.ty);
+    _v.set(p.x, T.kind === 'king' ? 7.6 : 4.9, p.z).project(camera);
+    el.style.left = ((_v.x + 1) / 2 * r.width) + 'px';
+    el.style.top = ((1 - _v.y) / 2 * r.height) + 'px';
+  }
+  for (const k of ['me', 'op']) {
+    const b = $('bub_' + k); if (!b) continue;
+    const kingId = (k === 'me') === (S.role === 'host') ? 'hK' : 'gK';
+    const T = TOWERS.find(t => t.id === kingId); const p = viewXZ(T.tx, T.ty);
+    _v.set(p.x + (k === 'me' ? -3.6 : 3.6), k === 'me' ? 5.2 : 6.5, p.z).project(camera);
+    b.style.left = ((_v.x + 1) / 2 * r.width) + 'px';
+    b.style.top = ((1 - _v.y) / 2 * r.height) + 'px';
+  }
+}
+
+// ---- griglia di debug (18x32) ---------------------------------------------
+const grid = new THREE.Group(); grid.visible = false; scene.add(grid);
+{
+  const mat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 });
+  const pts = [];
+  for (let x = 0; x <= CFG.W; x++) { pts.push(x - 9, 0.03, -16, x - 9, 0.03, 16); }
+  for (let y = 0; y <= CFG.H; y++) { pts.push(-9, 0.03, 16 - y, 9, 0.03, 16 - y); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  grid.add(new THREE.LineSegments(g, mat));
+}
+
+// ---- camera / resize ------------------------------------------------------
+function resize() {
+  const r = gameEl.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height;
+  fitCamera(r);
+}
+// inquadratura stile CR: vista dall'alto inclinata; cerca distanza e centro
+// perché tutta l'arena (18x32) entri nell'area sopra il vassoio delle carte
+const FIT_PTS = [];
+for (const x of [-9.4, 9.4]) for (const z of [-16.4, 16.4]) FIT_PTS.push(new THREE.Vector3(x, 0, z));
+FIT_PTS.push(new THREE.Vector3(0, 7.2, -13), new THREE.Vector3(-5.5, 4.4, -9.5), new THREE.Vector3(5.5, 4.4, -9.5));
+function fitCamera(r) {
+  const pitch = 57 * Math.PI / 180;
+  camera.fov = 36;
+  camera.updateProjectionMatrix();
+  const tray = $('tray').getBoundingClientRect().height || r.height * 0.24;
+  const yBot = -1 + 2 * (tray + 6) / r.height;       // NDC sopra il vassoio
+  const yTop = 1 - 2 * 64 / r.height;               // spazio per l'HUD in alto (e lo sfondo della piazza)
+  const place = (d, tz) => {
+    camera.position.set(0, d * Math.sin(pitch), tz + d * Math.cos(pitch));
+    camera.lookAt(0, 0, tz); camera.updateMatrixWorld();
+  };
+  const ext = () => {
+    let mnY = 9, mxY = -9, mxX = 0;
+    for (const p of FIT_PTS) { _v.copy(p).project(camera); mnY = Math.min(mnY, _v.y); mxY = Math.max(mxY, _v.y); mxX = Math.max(mxX, Math.abs(_v.x)); }
+    return { mnY, mxY, mxX };
+  };
+  let lo = 15, hi = 160, tz = 0;
+  for (let it = 0; it < 26; it++) {
+    const d = (lo + hi) / 2;
+    for (let k = 0; k < 10; k++) {          // centra verticalmente
+      place(d, tz); const e = ext();
+      const want = (yBot + yTop) / 2, mid = (e.mnY + e.mxY) / 2;
+      tz -= (mid - want) * d * 0.35;
+    }
+    place(d, tz); const e = ext();
+    const fits = e.mxX <= 1.0 && (e.mxY - e.mnY) <= (yTop - yBot);
+    if (fits) hi = d; else lo = d;
+  }
+  place(hi, tz);
+}
+window.addEventListener('resize', resize);
+
+// =====================================================================
+//  INTERFACCIA
+// =====================================================================
+const EMOTES = ['Ciao! 👋', 'Bella giocata!', 'Ops 😅', 'Grrr 😤', 'Grazie!', 'Ahahah 😂'];
+{
+  const menu = $('emoteMenu');
+  EMOTES.forEach((e, i) => { const b = document.createElement('button'); b.textContent = e; b.onclick = (ev) => { ev.stopPropagation(); sendEmote(i); menu.classList.remove('open'); }; menu.appendChild(b); });
+  $('emoteBtn').onclick = (ev) => { ev.stopPropagation(); menu.classList.toggle('open'); };
+  document.addEventListener('click', () => menu.classList.remove('open'));
+}
+const bubbleTimers = {};
+function showBubble(who, i) {
+  const b = $('bub_' + who); if (!b) return;
+  b.textContent = EMOTES[i] || '…';
+  b.classList.add('show');
+  clearTimeout(bubbleTimers[who]);
+  bubbleTimers[who] = setTimeout(() => b.classList.remove('show'), 2400);
+}
+let bannerT;
+function showBanner(big, sm = '', ms = 2200) {
+  $('bannerBig').textContent = big; $('bannerSm').textContent = sm;
+  $('banner').classList.add('show');
+  clearTimeout(bannerT); bannerT = setTimeout(() => $('banner').classList.remove('show'), ms);
+}
+let toastT;
+function toast(t, ms = 1800) { const el = $('toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => el.style.display = 'none', ms); }
+
+function fmt(ms) { ms = Math.max(0, ms); const s = Math.ceil(ms / 1000); return (s / 60 | 0) + ':' + String(s % 60).padStart(2, '0'); }
+
+// moltiplicatore elisir in base al tempo di partita
+function elixirMult(clock) {
+  if (clock < CFG.X2_AT) return 1;
+  if (clock < CFG.REG_MS) return 2;
+  if (clock < CFG.REG_MS + CFG.OT_X3_AT) return 2;
+  return 3;
+}
+// "millisecondi equivalenti x1" prodotti da 0 a clock (lineare a tratti)
+function elixirProd(c) {
+  c = Math.max(0, c);
+  const a = CFG.X2_AT, b = CFG.REG_MS + CFG.OT_X3_AT;
+  if (c <= a) return c;
+  if (c <= b) return a + 2 * (c - a);
+  return a + 2 * (b - a) + 3 * (c - b);
+}
+function overtime() { return S.clock >= CFG.REG_MS; }
+
+function renderHUD() {
+  const c = S.clock;
+  let rem, lbl;
+  if (S.phase === 'battle' || S.phase === 'end') {
+    if (!overtime()) { rem = CFG.REG_MS - c; lbl = 'Tempo rimasto'; }
+    else { rem = CFG.REG_MS + CFG.OT_MS - c; lbl = 'Supplementare'; }
+  } else { rem = CFG.REG_MS; lbl = 'Tempo rimasto'; }
+  $('timer').textContent = fmt(rem);
+  $('timer').classList.toggle('urg', (S.phase === 'battle') && rem <= 10000);
+  $('timerLbl').textContent = lbl;
+  const mult = S.phase === 'battle' ? elixirMult(c) : 1;
+  const mb = $('multBadge'); mb.style.display = mult > 1 ? 'inline-block' : 'none'; mb.textContent = 'x' + mult;
+  $('bar').classList.toggle('x2', mult > 1);
+
+  // barra elisir: segmenti pieni + segmento in carica
+  const e = S.elixir, full = Math.floor(e);
+  $('barFill').style.width = (full * 10) + '%';
+  const part = $('barPart');
+  if (full < CFG.ELIXIR_MAX) { part.style.left = (full * 10) + '%'; part.style.width = ((e - full) * 10) + '%'; }
+  else part.style.width = '0';
+  $('elixirNum').textContent = full;
+
+  const me = S.role, op = me === 'host' ? 'guest' : 'host';
+  $('crMe').textContent = S.crowns[me]; $('crOp').textContent = S.crowns[op];
+  $('opName').textContent = S.mode === 'solo' ? 'Allenamento' : S.opNick;
+  if (S.mode === 'solo') $('opSub').textContent = 'modalità prova';
+}
+
+// =====================================================================
+//  LOGICA DI GIOCO LOCALE (orologio + elisir)
+// =====================================================================
+let lastClock = null, x2Shown = false, otShown = false, x3Shown = false;
+function resetMatch() {
+  S.elixir = CFG.ELIXIR_START;
+  S.crowns = { host: 0, guest: 0 };
+  S.towers = {};
+  for (const T of TOWERS) { const mx = T.kind === 'king' ? CFG.KING_HP : CFG.PRINCESS_HP; S.towers[T.id] = { hp: mx, max: mx }; }
+  lastClock = null; x2Shown = otShown = x3Shown = false;
+  refreshLabels();
+}
+function tickGame() {
+  if (S.phase === 'count') {
+    const left = -S.clock;
+    const cd = $('countdown'); cd.classList.add('on');
+    cd.textContent = left > 0 ? Math.ceil(left / 1000) : '';
+    return;
+  }
+  $('countdown').classList.remove('on');
+  if (S.phase !== 'battle') return;
+
+  // elisir: tra un aggiornamento del server e l'altro lo facciamo crescere in locale
+  // (il valore vero arriva dal server 10 volte al secondo)
+  if (lastClock !== null && S.clock > lastClock) {
+    S.elixir = Math.min(CFG.ELIXIR_MAX, S.elixir + (elixirProd(S.clock) - elixirProd(lastClock)) / CFG.ELIXIR_MS);
+  }
+  if (lastClock === null || S.clock > lastClock) lastClock = Math.max(0, S.clock);
+
+  if (!x2Shown && S.clock >= CFG.X2_AT && S.clock < CFG.REG_MS) { x2Shown = true; showBanner('ELISIR x2!', '60 secondi rimasti'); }
+  if (!otShown && S.clock >= CFG.REG_MS) { otShown = true; showBanner('SUPPLEMENTARE', 'Chi abbatte una torre vince!'); }
+  if (!x3Shown && S.clock >= CFG.REG_MS + CFG.OT_X3_AT) { x3Shown = true; showBanner('ELISIR x3!', 'Ultimo minuto'); }
+
+  // in allenamento la fine la decide la pagina; online la decide il server
+  if (S.mode === 'solo') {
+    const tie = S.crowns.host === S.crowns.guest;
+    if ((S.clock >= CFG.REG_MS && !tie) || S.clock >= CFG.REG_MS + CFG.OT_MS) { S.phase = 'end'; showEnd(); }
+  }
+}
+
+// =====================================================================
+//  RETE: WebSocket verso il server di gioco (Node.js)
+//  Il server è l'arbitro: fasi, orologio ed elisir arrivano da lui.
+// =====================================================================
+const NET = { ws: null, start: null, connected: false, rtt: 80, opOn: false, pending: null, retry: 0, rt: null, serverEx: null };
+
+function cleanCode(c) { return String(c || '').toLowerCase().replace(/^#/, '').replace(/^p-/, '').replace(/[^a-z0-9]/g, '').slice(0, 10); }
+function linkFor(code) { return location.origin + location.pathname + '#p-' + code; }
+function wsUrl() { return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'; }
+
+function connect() {
+  if (NET.ws && (NET.ws.readyState === 0 || NET.ws.readyState === 1)) return;
+  let ws;
+  try { ws = new WebSocket(wsUrl()); } catch (e) { scheduleReconnect(); return; }
+  NET.ws = ws;
+  ws.onopen = () => {
+    NET.connected = true; NET.retry = 0; updateNetPill();
+    if (S.mode === 'online' && S.code) wsSend({ t: 'join', code: S.code, nick: S.nick, token: ssGet('pl_tok_' + S.code) });
+    else if (NET.pending) wsSend(NET.pending);
+    NET.pending = null;
+  };
+  ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } onMsg(m); };
+  ws.onclose = () => { if (NET.ws === ws) { NET.connected = false; updateNetPill(); scheduleReconnect(); } };
+  ws.onerror = () => {};
+}
+function scheduleReconnect() {
+  clearTimeout(NET.rt);
+  const d = Math.min(8000, 500 * 2 ** NET.retry++);
+  NET.rt = setTimeout(connect, d);
+}
+function wsSend(o) { if (NET.ws && NET.ws.readyState === 1) { NET.ws.send(JSON.stringify(o)); return true; } return false; }
+function action(o) { if (!wsSend(o)) { NET.pending = o; connect(); } }
+setInterval(() => wsSend({ t: 'ping', c: performance.now() }), 2000);
+
+function onMsg(m) {
+  switch (m.t) {
+    case 'hello': if (m.cfg) Object.assign(CFG, m.cfg); return;
+    case 'pong': { const r = performance.now() - m.c; NET.rtt = NET.rtt * 0.7 + r * 0.3; return; }
+    case 'joined': {
+      S.mode = 'online'; S.code = m.code; S.role = m.role;
+      ssSet('pl_tok_' + m.code, m.token);
+      try { if (location.hash !== '#p-' + m.code) history.replaceState(null, '', '#p-' + m.code); } catch (e) {}
+      resetMatch(); buildTowers(); updateNetPill();
+      S.phase = 'idle'; NET.start = null;
+      return;
+    }
+    case 'room': {
+      if (S.mode !== 'online') return;
+      if (m.role && m.role !== S.role) { S.role = m.role; buildTowers(); }
+      const op = (m.players || []).find(p => p && p.role !== S.role);
+      const prevOn = NET.opOn;
+      NET.opOn = !!(op && op.online);
+      S.opNick = op ? op.nick : 'Avversario';
+      $('opSub').textContent = op ? (op.online ? 'connesso' : 'disconnesso') : 'in attesa…';
+      if (S.phase === 'battle' && prevOn && !NET.opOn) toast(S.opNick + ' si è disconnesso…');
+      if (S.phase === 'battle' && !prevOn && NET.opOn) toast(S.opNick + ' è rientrato');
+      setPhase(m.ph);
+      if (S.phase === 'wait') renderWaitStatus(op);
+      refreshLabels(); updateNetPill();
+      return;
+    }
+    case 'st': {
+      if (S.mode !== 'online') return;
+      // allinea l'orologio locale a quello del server (metà del ping = ritardo di andata)
+      const est = Date.now() - m.clk - NET.rtt / 2;
+      if (NET.start === null || Math.abs(est - NET.start) > 300) NET.start = est;
+      else NET.start += (est - NET.start) * 0.1;
+      if (Array.isArray(m.cr)) { S.crowns.host = m.cr[0] | 0; S.crowns.guest = m.cr[1] | 0; }
+      NET.opOn = !!m.opOn;
+      setPhase(m.ph);
+      if (m.ph === 'battle') { S.elixir = m.ex; NET.serverEx = m.ex; lastClock = m.clk; }
+      return;
+    }
+    case 'emote': showBubble(m.role === S.role ? 'me' : 'op', m.i); return;
+    case 'end': {
+      if (Array.isArray(m.cr)) { S.crowns.host = m.cr[0] | 0; S.crowns.guest = m.cr[1] | 0; }
+      NET.endReason = m.reason;
+      setPhase('end');
+      return;
+    }
+    case 'rematch': {
+      if (m.who !== S.role) {
+        $('rematchStatus').style.display = 'flex';
+        $('rematchStatus').innerHTML = '<span>' + escapeHtml(S.opNick) + ' vuole la rivincita!</span>';
+      }
+      return;
+    }
+    case 'error': {
+      if (m.code === 'replaced') { S.mode = 'none'; toast(m.msg, 3000); backToLobby(false); return; }
+      backToLobby(false);
+      $('lobbyErr').textContent = m.msg || 'Errore';
+      return;
+    }
+  }
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+function setPhase(ph) {
+  if (!ph || ph === S.phase) return;
+  const prev = S.phase; S.phase = ph;
+  if (ph === 'wait') { NET.start = null; $('countdown').classList.remove('on'); showWait(S.code, S.role === 'host'); }
+  else if (ph === 'count') { resetMatch(); hideScreens(); }
+  else if (ph === 'battle') {
+    if (prev !== 'count') resetMatch();
+    hideScreens(); showBanner('BATTAGLIA!', '', 1300);
+  }
+  else if (ph === 'end') showEnd();
+}
+
+function beginBattle() { S.phase = 'battle'; lastClock = 0; showBanner('BATTAGLIA!', '', 1300); }  // solo allenamento
+
+function sendEmote(i) {
+  if (S.mode === 'online') wsSend({ t: 'emote', i });
+  else showBubble('me', i);
+}
+
+function setNet(cls, txt) { const p = $('netPill'); p.className = cls; $('netTxt').textContent = txt; }
+function updateNetPill() {
+  if (S.mode === 'solo') return setNet('warn', 'allenamento');
+  if (!NET.connected) return setNet(S.mode === 'online' ? 'bad' : '', S.mode === 'online' ? 'riconnessione…' : 'server…');
+  if (S.mode !== 'online') return setNet('ok', 'server online');
+  if (!NET.opOn) return setNet('warn', 'partita ' + S.code + ' · solo tu');
+  setNet('ok', 'online · ' + S.code + ' · ' + Math.round(NET.rtt) + 'ms');
+}
+setInterval(updateNetPill, 2000);
+
+// =====================================================================
+//  SCHERMATE
+// =====================================================================
+function hideScreens() { $('lobby').classList.remove('on'); $('endScreen').classList.remove('on'); }
+function showWait(code, asHost) {
+  $('lobby').classList.add('on'); $('endScreen').classList.remove('on');
+  $('lobbyMain').style.display = 'none'; $('lobbyWait').style.display = 'flex';
+  $('waitCode').textContent = code || '…';
+  $('linkBox').textContent = code ? linkFor(code) : '';
+  $('shareBlock').style.display = asHost && code ? 'block' : 'none';
+  $('waitHead').textContent = asHost ? 'Codice partita' : 'Partita';
+  renderWaitStatus(null);
+}
+function renderWaitStatus(op) {
+  let t;
+  if (!S.code) t = 'Collegamento al server…';
+  else if (op && !op.online) t = escapeHtml(op.nick) + ' si è disconnesso, aspetto che rientri…';
+  else if (op && op.online) t = 'Si parte!';
+  else t = S.role === 'host' ? 'In attesa dell\'avversario…' : 'In attesa dell\'host…';
+  $('waitStatus').innerHTML = '<div class="spin"></div><span>' + t + '</span>';
+}
+function backToLobby(sendLeave = true) {
+  if (sendLeave && S.mode === 'online') wsSend({ t: 'leave' });
+  S.mode = 'none'; S.phase = 'idle'; S.role = 'host'; S.code = null; NET.start = null; NET.opOn = false;
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  resetMatch(); buildTowers();
+  $('endScreen').classList.remove('on'); $('countdown').classList.remove('on');
+  $('lobby').classList.add('on'); $('lobbyMain').style.display = 'flex'; $('lobbyWait').style.display = 'none';
+  updateNetPill();
+}
+function showEnd() {
+  const me = S.role, op = me === 'host' ? 'guest' : 'host';
+  const a = S.crowns[me], b = S.crowns[op];
+  $('endRes').textContent = a > b ? 'Vittoria!' : a < b ? 'Sconfitta' : 'Pareggio';
+  $('endRes').style.color = a > b ? '#ffd23f' : a < b ? '#ff9a92' : '#fff';
+  $('endSub').textContent = S.mode === 'solo' ? 'Fine allenamento' : (NET.endReason === 'abbandono' ? S.opNick + ' ha abbandonato' : 'Contro ' + S.opNick);
+  $('endMe').textContent = 'Tu · ' + a; $('endOp').textContent = (S.mode === 'solo' ? 'Avv.' : S.opNick) + ' · ' + b;
+  $('rematchStatus').style.display = 'none'; $('btnRematch').disabled = false;
+  $('endScreen').classList.add('on');
+}
+
+function getNick() {
+  const n = $('nick').value.trim().slice(0, 16);
+  if (n) { S.nick = n; lsSet('pl_nick', n); }
+  return S.nick;
+}
+$('nick').value = lsGet('pl_nick') || '';
+if ($('nick').value) S.nick = $('nick').value;
+
+function joinCode(code) {
+  S.code = null; S.role = 'guest';
+  showWait(code, false);
+  $('waitCode').textContent = code;
+  action({ t: 'join', code, nick: S.nick, token: ssGet('pl_tok_' + code) });
+}
+$('btnCreate').onclick = () => {
+  getNick(); $('lobbyErr').textContent = '';
+  S.code = null; S.role = 'host';
+  showWait(null, true);
+  action({ t: 'create', nick: S.nick });
+};
+$('btnJoin').onclick = () => {
+  getNick(); $('lobbyErr').textContent = '';
+  const code = cleanCode($('codeIn').value);
+  if (code.length < 4) { $('lobbyErr').textContent = 'Inserisci il codice della partita (es. k7m2q).'; return; }
+  joinCode(code);
+};
+$('btnSolo').onclick = () => {
+  getNick();
+  S.mode = 'solo'; S.role = 'host'; S.opNick = 'Allenamento'; resetMatch(); buildTowers();
+  NET.start = Date.now() + CFG.COUNTDOWN_MS; S.phase = 'count'; hideScreens(); updateNetPill();
+};
+$('btnLeave').onclick = () => backToLobby(true);
+$('btnExit').onclick = () => backToLobby(true);
+$('btnCopy').onclick = () => {
+  const t = $('linkBox').textContent;
+  const ok = () => toast('Link copiato!');
+  try { navigator.clipboard.writeText(t).then(ok, () => { selectLink(); toast('Seleziona e copia il link'); }); }
+  catch (e) { selectLink(); toast('Seleziona e copia il link'); }
+};
+function selectLink() { const r = document.createRange(); r.selectNodeContents($('linkBox')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+$('btnRematch').onclick = () => {
+  if (S.mode === 'solo') { resetMatch(); NET.start = Date.now() + CFG.COUNTDOWN_MS; S.phase = 'count'; hideScreens(); return; }
+  wsSend({ t: 'rematch' });
+  $('btnRematch').disabled = true;
+  $('rematchStatus').style.display = 'flex';
+  $('rematchStatus').innerHTML = '<div class="spin"></div><span>In attesa che anche ' + escapeHtml(S.opNick) + ' accetti…</span>';
+};
+
+// pannello debug
+$('netPill').onclick = (e) => { e.stopPropagation(); $('debug').classList.toggle('open'); };
+$('debug').onclick = e => e.stopPropagation();
+function renderDebug() {
+  const d = $('debug'); if (!d.classList.contains('open')) return;
+  d.innerHTML =
+    'modalità: ' + S.mode + ' · ruolo: ' + S.role + '<br>' +
+    'fase: ' + S.phase + ' · orologio: ' + (S.clock / 1000).toFixed(1) + 's<br>' +
+    'mio elisir: ' + S.elixir.toFixed(2) + ' (server: ' + (NET.serverEx == null ? '—' : NET.serverEx.toFixed(2)) + ')<br>' +
+    'ping: ' + Math.round(NET.rtt) + 'ms · avversario: ' + (NET.opOn ? 'connesso' : 'no') + '<br>' +
+    '<label><input type="checkbox" id="dbgGrid"' + (grid.visible ? ' checked' : '') + '> mostra griglia 18×32</label>';
+  $('dbgGrid').onchange = (e) => { grid.visible = e.target.checked; };
+}
+let dbgT = 0;
+
+// =====================================================================
+//  LOOP
+// =====================================================================
+function logicStep() {
+  if ((S.phase === 'count' || S.phase === 'battle') && NET.start !== null) {
+    S.clock = Date.now() - NET.start;
+    if (S.mode === 'solo' && S.phase === 'count' && S.clock >= 0) beginBattle();
+  }
+  tickGame();
+}
+// anche con la scheda in background (dove il disegno si ferma) la logica continua
+setInterval(logicStep, 100);
+let t0 = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - t0) / 1000); t0 = now;
+  logicStep();
+  // acqua e bandiere
+  waterTex.offset.x -= dt * 0.04; waterTex.offset.y += dt * 0.01;
+  const tt = now / 1000;
+  for (let i = 0; i < flags.length; i++) {
+    const f = flags[i], pos = f.geometry.attributes.position;
+    if (!f.userData.base) f.userData.base = pos.array.slice();
+    const b = f.userData.base;
+    for (let k = 0; k < pos.count; k++) {
+      const x = b[k * 3];
+      pos.array[k * 3 + 2] = Math.sin(tt * 5 - x * 6 + i) * 0.09 * x;
+    }
+    pos.needsUpdate = true;
+  }
+  renderer.render(scene, camera);
+  placeLabels();
+  renderHUD();
+  if (now - dbgT > 250) { dbgT = now; renderDebug(); }
+  requestAnimationFrame(frame);
+}
+
+// =====================================================================
+//  AVVIO
+// =====================================================================
+resetMatch(); buildTowers(); resize(); updateNetPill();
+requestAnimationFrame(frame);
+// link con codice partita: #p-xxxxx
+connect();
+(function autoJoin() {
+  const h = cleanCode((location.hash || '').replace('#', ''));
+  if (location.hash.startsWith('#p-') && h.length >= 4) {
+    $('codeIn').value = h;
+    if (!lsGet('pl_nick')) { $('lobbyErr').textContent = 'Scrivi il tuo nome e premi "Entra" per unirti alla partita ' + h + '.'; $('nick').focus(); return; }
+    getNick();
+    joinCode(h);
+  }
+})();
+window.addEventListener('hashchange', () => {
+  if (location.hash.startsWith('#p-') && S.mode === 'none') {
+    const h = cleanCode(location.hash); $('codeIn').value = h;
+    if (lsGet('pl_nick') && h.length >= 4) { getNick(); joinCode(h); }
+  }
+});
+})();
+</script>
+</body>
+</html>
