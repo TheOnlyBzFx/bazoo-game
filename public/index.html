@@ -74,7 +74,8 @@
   .card.r-legendary{background:linear-gradient(135deg,#7ff2e6,#f6e27a 50%,#f59ad6)}
   .card.r-champion{background:linear-gradient(180deg,#fff2a8,#d9a520)}
   .card .inner{position:relative;width:100%;height:100%;border-radius:7px;background:linear-gradient(180deg,#f3efe6,#d9d2c3);overflow:hidden;display:flex;flex-direction:column;align-items:center}
-  .card svg{flex:1;width:100%;min-height:0}
+  .card svg,.card img{flex:1;width:100%;min-height:0;object-fit:contain;display:block}
+  .card .inner{background:radial-gradient(ellipse at 50% 40%,#fdfbf5,#d8cfbd)}
   .card .cname{width:100%;text-align:center;font:900 11px/1.1 'Nunito';color:#fff;background:rgba(20,14,30,.85);padding:3px 2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .card .ccost{position:absolute;left:-4px;top:-5px;width:24px;height:27px;display:flex;align-items:center;justify-content:center;padding-top:3px;font-size:15px;z-index:2}
   .card .ccost:before{content:'';position:absolute;inset:0;z-index:-1;border-radius:50% 50% 50% 50%/40% 40% 60% 60%;background:radial-gradient(circle at 40% 40%,#ffb3fb,#c22bc9 70%);border:2px solid #2a0b2e;transform:rotate(0deg)}
@@ -292,6 +293,8 @@
 
 <script src="vendor/three.min.js"></script>
 <script src="sim.js"></script>
+<script src="vendor/BufferGeometryUtils.js"></script>
+<script src="characters.js"></script>
 <script>
 (() => {
 'use strict';
@@ -597,28 +600,10 @@ const BLACK = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
 const GUNMETAL = new THREE.MeshLambertMaterial({ color: 0x55595f });
 
 // omino tiratore con pistola (in cima alle torri)
-function buildShooter(isKing) {
-  const g = new THREE.Group();
-  const T = 0.065, H = isKing ? 1.0 : 0.85;
-  const legL = H * 0.42, torsoL = H * 0.36, armL = H * 0.34;
-  for (const s of [-1, 1]) { const l = limb(legL, T * 0.8, BLACK); l.position.set(s * T * 0.9, legL, 0); g.add(l); }
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(T, T * 1.05, torsoL, 8), BLACK); torso.position.y = legL + torsoL / 2; torso.castShadow = true; g.add(torso);
-  const headR = H * 0.12;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(headR, 12, 10), BLACK); head.position.y = legL + torsoL + headR * 0.95; head.castShadow = true; g.add(head);
-  if (isKing) {
-    const cr = new THREE.Mesh(new THREE.CylinderGeometry(headR * 0.9, headR * 0.8, headR * 0.7, 8, 1, true), M.gold);
-    cr.position.y = head.position.y + headR * 0.95; g.add(cr);
-  }
-  const shY = legL + torsoL - H * 0.03;
-  const armR = limb(armL, T * 0.7, BLACK); armR.position.set(T + 0.02, shY, 0); armR.rotation.x = -Math.PI / 2; g.add(armR);
-  const armL2 = limb(armL, T * 0.7, BLACK); armL2.position.set(-T - 0.02, shY, 0); armL2.rotation.x = -1.3; armL2.rotation.z = -0.5; g.add(armL2);
-  // pistola
-  const gun = new THREE.Group(); gun.position.set(0, -armL, 0); armR.add(gun);
-  box(0.06, 0.07, 0.26, GUNMETAL, 0, 0, 0.08, gun, false);            // canna (prosegue il braccio)
-  box(0.05, 0.13, 0.06, BLACK, 0, -0.07, -0.01, gun, false);           // impugnatura
-  const muzzle = new THREE.Object3D(); muzzle.position.set(0, 0, 0.23); gun.add(muzzle);
-  gun.rotation.x = Math.PI / 2;
-  return { g, armR, muzzle, H };
+function buildShooter(isKing, mine) {
+  const ins = BazooChars.instance(isKing ? 'king' : 'guard', mine ? 'me' : 'op', { Ht: 0.95, wf: 1.15, scale: 1.25 });
+  ins.parts.armR.rotation.x = -Math.PI / 2;
+  return { g: ins.root, armR: ins.parts.armR, muzzle: ins.parts.muzzle, H: 1.2 };
 }
 function limb(len, rad, mat) {
   const g = new THREE.Group();
@@ -691,8 +676,8 @@ function buildTowers() {
     const holder = new THREE.Group(); holder.position.set(p.x, 0, p.z); towerGroup.add(holder);
     holder.add(tw.g);
     tw.g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    const sh = buildShooter(T.kind === 'king');
-    sh.g.position.y = tw.top; sh.g.scale.setScalar(1.25);
+    const sh = buildShooter(T.kind === 'king', mine);
+    sh.g.position.y = tw.top;
     sh.g.rotation.y = mine ? Math.PI : 0;   // guarda verso il nemico
     holder.add(sh.g);
     const obj = { holder, tower: tw.g, shooter: sh, top: tw.top, rubble: null, recoil: 0, aimYaw: sh.g.rotation.y };
@@ -766,172 +751,18 @@ const WM = {
   pink: new THREE.MeshLambertMaterial({ color: 0xd98a8a }),
   coil: new THREE.MeshLambertMaterial({ color: 0xd9a520, emissive: 0x000000 })
 };
-function cyl(r1, r2, len, mat, segs = 8) { const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, len, segs), mat); m.castShadow = true; return m; }
-function sph(r, mat) { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), mat); m.castShadow = true; return m; }
-// oggetto lungo l'asse z (in avanti) partendo dalla mano
-function alongZ(mesh, len, offset = 0) { mesh.rotation.x = Math.PI / 2; mesh.position.z = len / 2 + offset; return mesh; }
-
-function weaponR(kind, H) {
-  const g = new THREE.Group();
-  switch (kind) {
-    case 'lance': {
-      g.add(alongZ(cyl(0.045, 0.045, 0.5, WM.lanceB), 0.5, -0.15));
-      g.add(alongZ(cyl(0.015, 0.09, 1.3, WM.lanceW), 1.3, 0.35));
-      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.25, 8), WM.steel); tip.rotation.x = Math.PI / 2; tip.position.z = 1.75; g.add(tip);
-      break;
-    }
-    case 'spear': case 'spearshield': {
-      g.add(alongZ(cyl(0.02, 0.02, H * 0.95, WM.wood), H * 0.95, -0.2));
-      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.16, 6), WM.steel); tip.rotation.x = Math.PI / 2; tip.position.z = H * 0.95 - 0.2 + 0.08; g.add(tip);
-      break;
-    }
-    case 'sword': case 'twoswords': {
-      const bl = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, H * 0.6), kind === 'sword' ? WM.gold : WM.steel); bl.position.z = H * 0.32; bl.castShadow = true; g.add(bl);
-      const gd = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.04, 0.04), WM.gold); gd.position.z = 0.03; g.add(gd);
-      break;
-    }
-    case 'dagger': { const bl = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.015, 0.22), WM.steel); bl.position.z = 0.12; g.add(bl); break; }
-    case 'shotgun': {
-      const b = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.35), WM.darkwood); b.position.z = 0.02; g.add(b);
-      g.add(alongZ(cyl(0.05, 0.05, 0.55, WM.gun), 0.55, 0.15));
-      break;
-    }
-    case 'hammer': {
-      g.add(alongZ(cyl(0.025, 0.025, 0.55, WM.wood), 0.55, -0.05));
-      const hd = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.16, 0.16), WM.steel); hd.position.z = 0.5; hd.castShadow = true; g.add(hd);
-      break;
-    }
-    case 'mace': {
-      g.add(alongZ(cyl(0.025, 0.025, 0.45, WM.wood), 0.45, -0.05));
-      const hd = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 0), WM.steel); hd.position.z = 0.45; hd.castShadow = true; g.add(hd);
-      break;
-    }
-    case 'fire': { const s = sph(0.11, WM.fire); s.position.z = 0.05; g.add(s); break; }
-    case 'ice': { const s = sph(0.11, WM.ice); s.position.z = 0.05; g.add(s); break; }
-    case 'fists': { const s = sph(0.12, BLACK); g.add(s); break; }
-  }
-  return g;
-}
-
-function buildMount(kind) {
-  const g = new THREE.Group();
-  const mat = kind === 'pig' ? WM.pig : WM.horse;
-  const legs = [];
-  if (kind === 'horse') {
-    const bd = cyl(0.2, 0.2, 0.95, mat, 10); bd.rotation.x = Math.PI / 2; bd.position.y = 0.62; g.add(bd);
-    for (const sx of [-0.13, 0.13]) for (const sz of [-0.35, 0.35]) { const l = limb(0.5, 0.045, mat); l.position.set(sx, 0.55, sz); g.add(l); legs.push(l); }
-    const nk = cyl(0.09, 0.11, 0.5, mat); nk.position.set(0, 0.9, 0.5); nk.rotation.x = 0.6; g.add(nk);
-    const hd = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.36), mat); hd.position.set(0, 1.08, 0.72); hd.castShadow = true; g.add(hd);
-    const tl = cyl(0.03, 0.05, 0.45, BLACK); tl.position.set(0, 0.55, -0.55); tl.rotation.x = -0.5; g.add(tl);
-    return { g, legs, saddle: 0.8 };
-  }
-  const bd = cyl(0.26, 0.24, 0.75, mat, 10); bd.rotation.x = Math.PI / 2; bd.position.y = 0.45; g.add(bd);
-  for (const sx of [-0.15, 0.15]) for (const sz of [-0.25, 0.25]) { const l = limb(0.3, 0.05, mat); l.position.set(sx, 0.32, sz); g.add(l); legs.push(l); }
-  const hd = sph(0.2, mat); hd.position.set(0, 0.52, 0.45); g.add(hd);
-  const sn = cyl(0.08, 0.08, 0.1, WM.pink); sn.rotation.x = Math.PI / 2; sn.position.set(0, 0.48, 0.66); g.add(sn);
-  for (const s of [-1, 1]) { const tk = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.14, 6), WM.lanceW); tk.position.set(s * 0.1, 0.42, 0.62); tk.rotation.x = -0.6; g.add(tk); }
-  return { g, legs, saddle: 0.68 };
-}
-
-function buildSparky(body, ent) {
-  const ch = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.4, 1.15), BLACK); ch.position.y = 0.45; ch.castShadow = true; body.add(ch);
-  for (const sx of [-0.52, 0.52]) for (const sz of [-0.38, 0.38]) {
-    const w = cyl(0.22, 0.22, 0.12, WM.darkwood, 14); w.rotation.z = Math.PI / 2; w.position.set(sx, 0.22, sz); body.add(w);
-  }
-  const coil = new THREE.Group(); coil.position.set(0, 0.95, 0.05); coil.rotation.x = -0.25; body.add(coil);
-  const core = cyl(0.12, 0.12, 0.9, BLACK, 10); core.rotation.x = Math.PI / 2; core.position.z = 0.25; coil.add(core);
-  const coilMat = WM.coil.clone();
-  for (let i = 0; i < 4; i++) {
-    const r = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.045, 8, 18), coilMat); r.position.z = 0.0 + i * 0.18; r.castShadow = true; coil.add(r);
-  }
-  ent.coilMat = coilMat;
-  ent.muzzleY = 0.95;
-}
-
-const VIS = 1.35;   // gli omini sono disegnati un po' più grandi della loro area di gioco, per vederli bene
+const VIS = 1.45;  // i personaggi sono disegnati un po' più grandi della loro area di gioco, per vederli bene
 function buildFigure(c, mine) {
+  const ins = BazooChars.forCard(c, mine ? 'me' : 'op', VIS);
   const root = new THREE.Group();
   const sz = SIM.SIZE[c.size];
-  const H = sz.h * 1.2;
-  const T = thickness(c);
-  const ent = { root, H, parts: {}, muzzleY: H * 0.7 };
   const ringMat = (mine ? teamMat.me : teamMat.op).ring.clone();
   const ring = new THREE.Mesh(new THREE.RingGeometry(sz.r * 0.85, sz.r * 1.12, 24), ringMat);
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; root.add(ring);
-  ent.ringMat = ringMat; ent.ring = ring;
-  const body = new THREE.Group(); root.add(body); ent.parts.body = body;
-  const inner = new THREE.Group(); inner.scale.setScalar(VIS); body.add(inner);
-  if (c.machine) { buildSparky(inner, ent); ent.top = 1.4 * VIS; ent.muzzleY *= VIS; return ent; }
-  let baseY = 0;
-  if (c.mount) { const mt = buildMount(c.mount); inner.add(mt.g); ent.parts.mount = mt; baseY = mt.saddle; }
-  const rider = new THREE.Group(); rider.position.y = baseY; inner.add(rider); ent.parts.rider = rider;
-  const legL = H * 0.42, torsoL = H * 0.36, armL = H * 0.34, headR = Math.max(H * 0.11, T * 1.25);
-  const hipY = c.mount ? 0.05 : legL;
-  if (!c.mount) {
-    ent.parts.legL = limb(legL, T * 0.8, BLACK); ent.parts.legL.position.set(-T * 0.9, hipY, 0); rider.add(ent.parts.legL);
-    ent.parts.legR = limb(legL, T * 0.8, BLACK); ent.parts.legR.position.set(T * 0.9, hipY, 0); rider.add(ent.parts.legR);
-  } else {
-    for (const s of [-1, 1]) { const l = limb(legL * 0.55, T * 0.75, BLACK); l.position.set(s * (T + 0.08), hipY + 0.02, 0); l.rotation.z = s * 0.9; rider.add(l); }
-  }
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(T, T * 1.05, torsoL, 8), BLACK);
-  torso.position.y = hipY + torsoL / 2; torso.castShadow = true; rider.add(torso);
-  const neckY = hipY + torsoL;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(headR, 12, 10), BLACK); head.position.y = neckY + headR * 0.95; head.castShadow = true; rider.add(head);
-  const shY = neckY - H * 0.03;
-  const armR = limb(armL, T * 0.7, BLACK); armR.position.set(T + 0.02, shY, 0); rider.add(armR);
-  const armL2 = limb(armL, T * 0.7, BLACK); armL2.position.set(-T - 0.02, shY, 0); rider.add(armL2);
-  ent.parts.armR = armR; ent.parts.armL = armL2;
-  // posa delle braccia secondo l'arma
-  const w = c.weapon;
-  let restR = { x: -0.5, z: 0.25 }, restL = { x: -0.2, z: -0.25 };
-  if (['lance', 'shotgun', 'spear', 'spearshield'].includes(w)) restR = { x: -1.35, z: 0.1 };
-  if (w === 'bow') { restR = { x: -1.3, z: 0.35 }; restL = { x: -1.45, z: -0.1 }; }
-  if (w === 'barrel') { restR = { x: -2.9, z: 0.25 }; restL = { x: -2.9, z: -0.25 }; }
-  if (w === 'cannon') { restR = { x: -2.6, z: 0.2 }; }
-  if (w === 'fire' || w === 'ice') restR = { x: -1.1, z: 0.3 };
-  if (w === 'twoswords') restL = { x: -0.5, z: -0.25 };
-  if (w === 'mace') restL = { x: -1.0, z: -0.3 };
-  ent.restR = restR; ent.restL = restL;
-  // armi
-  const hand = (arm) => { const h = new THREE.Group(); h.position.y = -armL; arm.add(h); return h; };
-  const hr = hand(armR), hl = hand(armL2);
-  if (['lance', 'spear', 'spearshield', 'sword', 'twoswords', 'dagger', 'shotgun', 'hammer', 'mace', 'fire', 'ice', 'fists'].includes(w)) {
-    const wr = weaponR(w, H); wr.rotation.x = 0; hr.add(wr);
-    // lance, lance corte e fucile proseguono il braccio teso in avanti
-    if (['lance', 'shotgun', 'spear', 'spearshield'].includes(w)) wr.rotation.x = Math.PI / 2 + 0.2;
-  }
-  if (w === 'twoswords') { const wl = weaponR('sword', H); wl.rotation.x = 0; wl.children[0].material = WM.steel; hl.add(wl); }
-  if (w === 'fists') hl.add(sph(0.12, BLACK));
-  if (w === 'spearshield' || w === 'mace') {
-    const sh = new THREE.Mesh(new THREE.BoxGeometry(0.06, H * 0.42, H * 0.32), w === 'mace' ? WM.gun : WM.wood);
-    sh.position.set(-0.05, 0.05, 0.08); sh.castShadow = true; hl.add(sh);
-  }
-  if (w === 'bow') {
-    const bow = new THREE.Mesh(new THREE.TorusGeometry(H * 0.28, 0.022, 6, 16, Math.PI), WM.wood);
-    bow.rotation.set(0, Math.PI / 2, Math.PI / 2); hl.add(bow);
-    const str = cyl(0.006, 0.006, H * 0.56, WM.lanceW, 4); hl.add(str);
-  }
-  if (w === 'barrel') {
-    const b = cyl(0.17, 0.17, 0.42, WM.wood, 12); b.rotation.z = Math.PI / 2; b.position.y = neckY + headR * 2 + 0.3; rider.add(b);
-    for (const s of [-0.13, 0.13]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.172, 0.018, 6, 16), WM.steel); r.rotation.y = Math.PI / 2; r.position.set(s, b.position.y, 0); rider.add(r); }
-  }
-  if (w === 'cannon') {
-    const cn = cyl(0.13, 0.15, 0.9, WM.gun, 12); cn.rotation.x = Math.PI / 2; cn.position.set(T + 0.12, shY + 0.12, 0.15); rider.add(cn);
-  }
-  if (c.flying) {
-    for (const s of [-1, 1]) {
-      const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(s * 0.55, 0.25); sh.lineTo(s * 0.45, -0.1); sh.lineTo(s * 0.2, -0.15); sh.lineTo(0, 0);
-      const wg = new THREE.Mesh(new THREE.ShapeGeometry(sh), WM.wing); wg.position.set(0, shY - 0.02, -T - 0.02); rider.add(wg);
-      ent.parts['wing' + s] = wg;
-    }
-  }
-  if (w === 'sword' && c.champion) {   // un tocco d'oro per Coto
-    const band = new THREE.Mesh(new THREE.TorusGeometry(headR * 1.02, headR * 0.18, 6, 16), WM.gold);
-    band.rotation.x = Math.PI / 2; band.position.y = head.position.y + headR * 0.35; rider.add(band);
-  }
-  ent.top = (baseY + neckY + headR * 2 + (w === 'barrel' ? 0.5 : 0)) * VIS;
-  ent.muzzleY = (baseY + shY) * VIS;
-  return ent;
+  root.add(ins.root);
+  const m = ins.meta;
+  return { root, H: sz.h * 1.2, parts: ins.parts, mat: ins.mat, ringMat, ring, top: m.top, muzzleY: m.muzzleY,
+    restR: m.restR, restL: m.restL, mounted: m.mounted, orb: ins.parts.orb };
 }
 
 const unitGroup = new THREE.Group(); scene.add(unitGroup);
@@ -992,15 +823,16 @@ function codePos(code, now) {
   const e = ents.get(code);
   if (!e || e.dead) return null;
   const p = entPos(e, now);
-  return { x: p.x, y: p.y, h: e.c.flying ? 2.1 : (e.H * 0.55 + (e.c.mount ? 0.6 : 0)) * VIS, ent: e };
+  return { x: p.x, y: p.y, h: e.parts.body.position.y + e.top * 0.55, ent: e };
 }
 
 function updateEnts(now, dt) {
   for (const e of ents.values()) {
     if (e.dead) {
-      const k = (now - e.dead) / 350;
+      const k = (now - e.dead) / 450;
       if (k >= 1) { removeEnt(e); continue; }
-      e.root.scale.set(1 - k * 0.6, Math.max(0.05, 1 - k), 1 - k * 0.6);
+      e.parts.body.rotation.x = -Math.min(1, k * 2) * 1.45;
+      e.root.scale.setScalar(1 - Math.max(0, k - 0.5) * 2);
       continue;
     }
     const p = entPos(e, now);
@@ -1033,28 +865,35 @@ function updateEnts(now, dt) {
       lift += Math.sin(k * Math.PI) * 0.9;
     }
     e.parts.body.position.y = lift;
-    e.ring.visible = !e.c.flying || true;
     // camminata
-    if (moved > 0.0005) e.walk += moved * 9;
-    const sw = moved > 0.0005 ? Math.sin(e.walk) : 0;
-    if (e.parts.legL) { e.parts.legL.rotation.x = sw * 0.75; e.parts.legR.rotation.x = -sw * 0.75; }
-    if (e.parts.mount) e.parts.mount.legs.forEach((l, i) => { l.rotation.x = Math.sin(e.walk * 1.3 + (i % 2 ? Math.PI : 0) + (i > 1 ? 1 : 0)) * 0.6 * (moved > 0.0005 ? 1 : 0); });
-    if (e.parts['wing-1']) { const f = Math.sin(now / 60 + e.id) * 0.6; e.parts['wing-1'].rotation.y = f; e.parts['wing1'].rotation.y = -f; }
+    if (moved > 0.0005) e.walk += moved * 8;
+    const mv = moved > 0.0005 ? 1 : 0;
+    const sw = mv ? Math.sin(e.walk) : 0;
+    if (e.parts.legL && !e.mounted) { e.parts.legL.rotation.x = sw * 0.7; e.parts.legR.rotation.x = -sw * 0.7; }
+    if (!e.mounted && !e.c.flying && !e.c.machine) e.parts.body.position.y += Math.abs(Math.cos(e.walk)) * 0.05 * mv;
+    if (e.parts.mount) e.parts.mount.legs.forEach((l, i) => { l.rotation.x = Math.sin(e.walk * 1.4 + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.65 * mv; });
+    if (e.parts.head) e.parts.head.rotation.z = Math.sin(now / 400 + e.id) * 0.05;
+    for (const f of e.parts.flames) f.scale.set(1, 0.7 + Math.random() * 0.6, 1);
     // braccia: posa + attacco
-    if (e.parts.armR) {
-      let ax = e.restR.x + (e.restR.x > -0.8 ? -sw * 0.4 : 0), lx = e.restL.x + (e.restL.x > -0.8 ? sw * 0.4 : 0);
+    if (e.parts.armR && e.restR) {
+      let ax = e.restR.x + (e.restR.x > -0.8 ? -sw * 0.45 : 0), lx = e.restL.x + (e.restL.x > -0.8 ? sw * 0.45 : 0);
       if (e.atkT > 0) {
         const k = 1 - e.atkT / 0.35;
         const ranged = !!e.c.proj || !!e.c.pellets;
         if (ranged) ax += Math.sin(k * Math.PI) * 0.35;
-        else { ax += -Math.sin(k * Math.PI) * 1.7; if (e.c.weapon === 'twoswords') lx += -Math.sin(((k + 0.5) % 1) * Math.PI) * 1.7; }
+        else {
+          ax += -Math.sin(k * Math.PI) * 1.7;
+          if (e.c.weapon === 'twoswords' || e.c.weapon === 'fists') lx += -Math.sin(((k + 0.5) % 1) * Math.PI) * 1.7;
+        }
         e.atkT -= dt;
       }
       e.parts.armR.rotation.x = ax; e.parts.armR.rotation.z = e.restR.z;
       e.parts.armL.rotation.x = lx; e.parts.armL.rotation.z = e.restL.z;
     }
+    // lampo quando viene colpito
+    if (e.mat) { const f = e.hitT && now - e.hitT < 110 ? 0.55 : 0; e.mat.emissive.setRGB(f, f, f); }
     // scintilla che si carica
-    if (e.coilMat) { const k = (e.spark || 0) / 100; e.coilMat.emissive.setRGB(0.2 * k, 0.5 * k, 1.0 * k); }
+    if (e.orb) { const k = (e.spark || 0) / 100; e.orb.scale.setScalar(0.6 + k * 0.7); e.orb.material.color.setRGB(0.25 + 0.6 * k, 0.55 + 0.4 * k, 1); }
     // anello: blu chiaro se rallentato, trasparente durante lo schieramento
     e.ringMat.color.set(e.flags & 8 ? 0x9fe6ff : (e.mine ? 0x3d8ef0 : 0xf0453d));
     e.ringMat.opacity = deploying ? 0.35 : 0.85;
@@ -1499,7 +1338,8 @@ function figureSVG(c) {
 const svgCache = {};
 function cardHTML(ci, mini) {
   const c = CARDS[ci];
-  const svg = svgCache[ci] || (svgCache[ci] = figureSVG(c));
+  const img = BazooChars.portrait(c);
+  const svg = img ? `<img src="${img}" alt="">` : (svgCache[ci] || (svgCache[ci] = figureSVG(c)));
   return `<div class="card r-${c.rarity}${mini ? ' mini' : ''}" data-ci="${ci}">
     <div class="inner">${svg}<div class="cname">${escapeHtml(c.name)}</div></div>
     <div class="ccost font-g stroke">${c.cost}</div>

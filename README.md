@@ -8,7 +8,8 @@ I giocatori **non hanno bisogno di nessun account**: si apre il link e si gioca.
 ```
 server.js            server Node.js: pagina del gioco + partite in tempo reale (WebSocket)
 public/sim.js        motore della battaglia (carte, truppe, torri) — gira sul server e, per l'allenamento, nel browser
-public/index.html    il gioco (arena 3D, carte, omini, effetti, collegamento al server)
+public/characters.js personaggi 3D in stile cartoon (aspetto di ogni carta in LOOKS) e ritratti delle carte
+public/index.html    il gioco (arena 3D, carte, effetti, collegamento al server)
 public/vendor/       three.js (grafica 3D)
 render.yaml          configurazione pronta per Render.com
 ```
