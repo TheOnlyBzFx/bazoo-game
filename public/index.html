@@ -155,6 +155,8 @@
   .btn:disabled{opacity:.5;cursor:default}
   .row{display:flex;gap:8px}
   .row .inp{flex:1;text-transform:lowercase}
+  #diffRow .diff{flex:1;font-size:14px;padding:8px 4px;border:2px solid transparent}
+  #diffRow .diff.on{border-color:var(--oro);background:linear-gradient(180deg,rgba(255,210,63,.35),rgba(255,210,63,.12))}
   .code{font-size:46px;color:var(--oro);letter-spacing:4px;margin:4px 0}
   .linkbox{font:700 11px ui-monospace,monospace;background:rgba(0,0,0,.4);border-radius:8px;padding:8px;word-break:break-all;user-select:text;-webkit-user-select:text;text-align:left}
   .hint{font-size:12px;opacity:.8;font-weight:700;line-height:1.4}
@@ -162,7 +164,7 @@
   .spin{width:14px;height:14px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:var(--oro);animation:sp 1s linear infinite;flex:none}
   @keyframes sp{to{transform:rotate(360deg)}}
   .err{color:#ffb3ae;font-size:12.5px;font-weight:800;line-height:1.4}
-  #deckPreview{display:grid;grid-template-columns:repeat(8,1fr);gap:3px}
+  #deckPreview{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px}
   #deckPreview .card{height:auto;aspect-ratio:3/4}
   #endScreen .res{font-size:48px;margin-bottom:6px}
   #endScreen .crowns-big{display:flex;gap:30px;justify-content:center;margin:12px 0 22px;font-size:22px}
@@ -171,9 +173,9 @@
   /* mazzo */
   #deckScreen{justify-content:flex-start;padding:14px 12px;overflow-y:auto}
   #deckScreen .head{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:420px;margin-bottom:8px}
-  #deckSlots{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;width:100%;max-width:420px;margin-bottom:8px}
+  #deckSlots{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;width:100%;max-width:420px;margin-bottom:8px}
   #deckSlots .card,#deckSlots .slotEmpty{height:auto;aspect-ratio:3/4;font-size:14px}
-  #allCards{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;width:100%;max-width:420px}
+  #allCards{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;width:100%;max-width:420px}
   #allCards .card{height:auto;aspect-ratio:3/4}
   #allCards .card.inDeck{outline:3px solid #4ade80;outline-offset:1px}
   #allCards .card.inDeck:after{content:'✓';position:absolute;right:-5px;bottom:-5px;width:18px;height:18px;border-radius:50%;background:#22c55e;color:#fff;font:900 12px/18px 'Nunito';text-align:center}
@@ -241,7 +243,13 @@
       <button class="btn p" id="btnDeck" style="font-size:16px;padding:9px">Modifica mazzo</button>
       <button class="btn y" id="btnCreate">Crea partita</button>
       <div class="row"><input class="inp" id="codeIn" maxlength="12" placeholder="codice partita" autocomplete="off"><button class="btn b" id="btnJoin" style="font-size:17px">Entra</button></div>
-      <button class="btn g" id="btnSolo">Allenamento contro il bot</button>
+      <label style="margin-top:4px">Gioca da solo</label>
+      <div class="row" id="diffRow">
+        <button class="btn g diff" data-lv="facile">Facile</button>
+        <button class="btn g diff" data-lv="normale">Normale</button>
+        <button class="btn g diff" data-lv="difficile">Difficile</button>
+      </div>
+      <button class="btn b" id="btnSolo">Gioca contro il computer</button>
       <div class="err" id="lobbyErr"></div>
     </div>
     <div class="panel" id="lobbyWait" style="display:none">
@@ -1722,13 +1730,14 @@ setInterval(() => { if (S.mode !== 'solo') wsSend({ t: 'ping', c: performance.no
 
 // allenamento: la stessa simulazione del server, ma nel browser, contro il bot
 class LocalServer {
-  start(deck) {
+  start(deck, level) {
     this.stop();
-    this.sim = new SIM.Sim({ decks: [deck, SIM.randomDeck()] });
-    this.bot = new SIM.Bot(this.sim, 1);
+    this.level = level || this.level || 'normale';
+    this.sim = new SIM.Sim({ decks: [deck, SIM.botDeck()] });
+    this.bot = new SIM.Bot(this.sim, 1, this.level);
     this.phase = 'count'; this.t0 = Date.now() + CFG.COUNTDOWN_MS; this.ticks = 0;
     this.timer = setInterval(() => this.tick(), 50);
-    this.emit({ t: 'room', code: 'bot', ph: 'count', role: 'host', players: [{ role: 'host', nick: S.nick, online: true }, { role: 'guest', nick: 'Bot', online: true }] });
+    this.emit({ t: 'room', code: 'cpu', ph: 'count', role: 'host', players: [{ role: 'host', nick: S.nick, online: true }, { role: 'guest', nick: 'Computer', online: true }] });
     this.send();
   }
   stop() { clearInterval(this.timer); this.timer = null; }
@@ -1754,6 +1763,11 @@ class LocalServer {
     const m = Object.assign({ t: 'st', ph: this.phase, clk: this.clk(), opOn: true }, this.sim.snapshot(0));
     const ev = this.sim.flushEvents(); if (ev.length) m.ev = ev;
     this.emit(m);
+    // il computer commenta le torri abbattute
+    for (const e of ev) if (e[0] === 'tw') {
+      const mine = SIM.TOWERS[e[1]].team === 1;
+      if (Math.random() < 0.7) setTimeout(() => this.emit({ t: 'emote', role: 'guest', i: mine ? 3 : 5 }), 700);
+    }
   }
   emit(m) { onMsg(m, 'local'); }
   showcase() {   // solo per i test: tutte le truppe in fila
@@ -1765,7 +1779,7 @@ class LocalServer {
       case 'play': { if (this.phase !== 'battle') return; const r = this.sim.play(0, m.i, m.x, m.y, m.card); if (!r.ok) this.emit({ t: 'nope', err: r.err, i: m.i }); break; }
       case 'ability': { if (this.phase !== 'battle') return; const r = this.sim.ability(0); if (!r.ok) this.emit({ t: 'nope', err: r.err }); break; }
       case 'emote': this.emit({ t: 'emote', role: 'host', i: m.i }); if (Math.random() < 0.5) setTimeout(() => this.emit({ t: 'emote', role: 'guest', i: (Math.random() * EMOTES.length) | 0 }), 900); break;
-      case 'rematch': this.start(m.deck || myDeck); break;
+      case 'rematch': this.start(m.deck || myDeck, this.level); break;
       case 'leave': this.stop(); break;
     }
   }
@@ -1790,7 +1804,7 @@ function onMsg(m, src) {
       const prevOn = NET.opOn;
       NET.opOn = !!(op && op.online);
       S.opNick = op ? op.nick : 'Avversario';
-      $('opSub').textContent = S.mode === 'solo' ? 'allenamento' : op ? (op.online ? 'connesso' : 'disconnesso') : 'in attesa…';
+      $('opSub').textContent = S.mode === 'solo' ? 'difficoltà: ' + DIFF_LABEL[botLevel] : op ? (op.online ? 'connesso' : 'disconnesso') : 'in attesa…';
       if (S.phase === 'battle' && prevOn && !NET.opOn) toast(S.opNick + ' si è disconnesso…');
       if (S.phase === 'battle' && !prevOn && NET.opOn) toast(S.opNick + ' è rientrato');
       setPhase(m.ph);
@@ -1858,7 +1872,7 @@ function setPhase(ph) {
 function sendEmote(i) { netSend({ t: 'emote', i }); }
 function setNet(cls, txt) { const p = $('netPill'); p.className = cls; $('netTxt').textContent = txt; }
 function updateNetPill() {
-  if (S.mode === 'solo') return setNet('warn', 'allenamento');
+  if (S.mode === 'solo') return setNet('ok', 'contro il computer');
   if (!NET.connected) return setNet(S.mode === 'online' ? 'bad' : '', S.mode === 'online' ? 'riconnessione…' : 'server…');
   if (S.mode !== 'online') return setNet('ok', 'server online');
   if (!NET.opOn) return setNet('warn', 'partita ' + S.code + ' · solo tu');
@@ -1976,7 +1990,7 @@ function showEnd() {
   $('endRes').textContent = res;
   $('endRes').style.color = a > b ? '#ffd23f' : a < b ? '#ff9a92' : '#fff';
   const why = { re: 'Torre del re abbattuta!', abbandono: S.opNick + ' ha abbandonato', spareggio: 'Decide la torre più danneggiata', tempo: 'Tempo scaduto', supplementare: 'Decisa nel supplementare' }[reason] || '';
-  $('endSub').textContent = (S.mode === 'solo' ? 'Allenamento · ' : 'Contro ' + S.opNick + ' · ') + why;
+  $('endSub').textContent = (S.mode === 'solo' ? 'Contro il computer (' + DIFF_LABEL[botLevel] + ') · ' : 'Contro ' + S.opNick + ' · ') + why;
   $('endMe').textContent = 'Tu · ' + a; $('endOp').textContent = S.opNick + ' · ' + b;
   $('rematchStatus').style.display = 'none'; $('btnRematch').disabled = false;
   $('endScreen').classList.add('on');
@@ -1996,11 +2010,16 @@ $('btnJoin').onclick = () => {
   if (code.length < 4) { $('lobbyErr').textContent = 'Inserisci il codice della partita (es. k7m2q).'; return; }
   joinCode(code);
 };
+const DIFF_LABEL = { facile: 'Facile', normale: 'Normale', difficile: 'Difficile' };
+let botLevel = DIFF_LABEL[lsGet('pl_diff')] ? lsGet('pl_diff') : 'normale';
+function renderDiff() { document.querySelectorAll('#diffRow .diff').forEach(b => b.classList.toggle('on', b.dataset.lv === botLevel)); }
+document.querySelectorAll('#diffRow .diff').forEach(b => b.onclick = () => { botLevel = b.dataset.lv; lsSet('pl_diff', botLevel); renderDiff(); });
+renderDiff();
 $('btnSolo').onclick = () => {
   getNick(); audioInit();
-  S.mode = 'solo'; S.role = 'host'; S.code = null; S.phase = 'idle'; S.opNick = 'Bot';
+  S.mode = 'solo'; S.role = 'host'; S.code = null; S.phase = 'idle'; S.opNick = 'Computer';
   resetMatchView(); hideScreens(); updateNetPill();
-  LOCAL = new LocalServer(); LOCAL.start(myDeck);
+  LOCAL = new LocalServer(); LOCAL.start(myDeck, botLevel);
   if (location.search.includes('vetrina')) setTimeout(() => LOCAL.showcase(), 3300);
 };
 $('btnLeave').onclick = () => backToLobby(true);

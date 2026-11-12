@@ -54,63 +54,65 @@ const TOWERS = [
 ];
 
 // ---------------------------------------------------------------------
-//  CARTE  (statistiche prese dagli screenshot; "ispirata" = solo riferimento)
+//  CARTE  (statistiche prese dagli screenshot e portate tutte al livello 11,
+//  lo stesso delle torri: +10% per ogni livello in più, -10% per ogni livello in meno.
+//  lvScreenshot = livello della carta nello screenshot; "ispirata" = solo riferimento)
 //  targets: 'ground' (solo terra) | 'airground' (aria e terra) | 'buildings' (solo edifici)
 // ---------------------------------------------------------------------
 const CARDS = [
-  { id: 'bazoo', name: 'Bazoo', ispirata: 'Principe', rarity: 'epic', cost: 5, count: 1,
-    hp: 2107, dmg: 429, chargeDmg: 859, hitSpeed: 1.4, speed: 'media', range: MELEE.lunga, rangeLabel: 'Mischia: lunga',
+  { id: 'bazoo', lvScreenshot: 12, name: 'Bazoo', ispirata: 'Principe', rarity: 'epic', cost: 5, count: 1,
+    hp: 1915, dmg: 390, chargeDmg: 781, hitSpeed: 1.4, speed: 'media', range: MELEE.lunga, rangeLabel: 'Mischia: lunga',
     targets: 'ground', size: 'L', weapon: 'lance', mount: 'horse', charge: true },
-  { id: 'ale', name: 'Ale Torresani', ispirata: 'Goblin lancieri', rarity: 'common', cost: 2, count: 3,
-    hp: 133, dmg: 81, hitSpeed: 1.7, speed: 'molto_rapida', range: 5, targets: 'airground', size: 'S',
-    weapon: 'spear', proj: 'spear', estimated: true },
-  { id: 'bebe', name: 'Bebe', ispirata: 'Sgherri', rarity: 'common', cost: 3, count: 3,
-    hp: 252, dmg: 118, hitSpeed: 1.2, speed: 'rapida', range: 2.5, targets: 'airground', size: 'S',
+  { id: 'ale', lvScreenshot: 9, name: 'Ale Torre', ispirata: 'Goblin lancieri', rarity: 'common', cost: 2, count: 3,
+    hp: 133, dmg: 81, hitSpeed: 1.6, speed: 'molto_rapida', range: 5, targets: 'airground', size: 'S',
+    weapon: 'spear', proj: 'spear' },
+  { id: 'bebe', lvScreenshot: 12, name: 'Bebe', ispirata: 'Sgherri', rarity: 'common', cost: 3, count: 3,
+    hp: 229, dmg: 107, hitSpeed: 1.2, speed: 'rapida', range: 2.5, targets: 'airground', size: 'S',
     flying: true, weapon: 'claws', proj: 'ball' },
-  { id: 'coto', name: 'Coto', ispirata: "Cavaliere d'oro", rarity: 'champion', cost: 4, count: 1,
-    hp: 1975, dmg: 185, hitSpeed: 0.9, speed: 'media', range: MELEE.media, rangeLabel: 'Mischia: media',
+  { id: 'coto', lvScreenshot: 12, name: 'Coto', ispirata: "Cavaliere d'oro", rarity: 'champion', cost: 4, count: 1,
+    hp: 1795, dmg: 168, hitSpeed: 0.9, speed: 'media', range: MELEE.media, rangeLabel: 'Mischia: media',
     targets: 'ground', size: 'M', weapon: 'sword', champion: true,
     ability: { name: 'Scatto', cost: 1, cooldown: 13, dmg: 310, range: 5.5, maxTargets: 10 } },
-  { id: 'cheo', name: 'Cheo', ispirata: 'Cacciatore', rarity: 'epic', cost: 4, count: 1,
-    hp: 667, dmg: 63, pellets: 10, hitSpeed: 2.2, speed: 'media', range: 4, projRange: 6.5,
+  { id: 'cheo', lvScreenshot: 8, name: 'Cheo', ispirata: 'Cacciatore', rarity: 'epic', cost: 4, count: 1,
+    hp: 888, dmg: 84, pellets: 10, hitSpeed: 2.2, speed: 'media', range: 4, projRange: 6.5,
     targets: 'airground', size: 'M', weapon: 'shotgun' },
-  { id: 'canne', name: 'Canne', ispirata: 'Domatore di cinghiali', rarity: 'rare', cost: 4, count: 1,
-    hp: 1863, dmg: 348, hitSpeed: 1.6, speed: 'molto_rapida', range: MELEE.corta, rangeLabel: 'Mischia: corta',
+  { id: 'canne', lvScreenshot: 12, name: 'Canne', ispirata: 'Domatore di cinghiali', rarity: 'rare', cost: 4, count: 1,
+    hp: 1694, dmg: 316, hitSpeed: 1.6, speed: 'molto_rapida', range: MELEE.corta, rangeLabel: 'Mischia: corta',
     targets: 'buildings', size: 'L', weapon: 'hammer', mount: 'pig', jump: true },
-  { id: 'frankie', name: 'Frankie', ispirata: 'Gigante', rarity: 'rare', cost: 5, count: 1,
-    hp: 3286, dmg: 209, hitSpeed: 1.5, speed: 'lenta', range: MELEE.media, rangeLabel: 'Mischia: media',
+  { id: 'frankie', lvScreenshot: 9, name: 'Frankie', ispirata: 'Gigante', rarity: 'rare', cost: 5, count: 1,
+    hp: 3976, dmg: 253, hitSpeed: 1.5, speed: 'lenta', range: MELEE.media, rangeLabel: 'Mischia: media',
     targets: 'buildings', size: 'XL', weapon: 'fists' },
-  { id: 'mara', name: 'Mara', ispirata: 'Principessa', rarity: 'legendary', cost: 3, count: 1,
-    hp: 286, dmg: 185, hitSpeed: 3, speed: 'media', range: 9, targets: 'airground', size: 'M',
+  { id: 'mara', lvScreenshot: 12, name: 'Mara', ispirata: 'Principessa', rarity: 'legendary', cost: 3, count: 1,
+    hp: 260, dmg: 168, hitSpeed: 3, speed: 'media', range: 9, targets: 'airground', size: 'M',
     weapon: 'bow', proj: 'firearrows', splash: 2.0, deployTime: 1.2 },
-  { id: 'jack', name: 'Jack Espo', ispirata: 'Stregone', rarity: 'rare', cost: 5, count: 1,
-    hp: 687, dmg: 277, hitSpeed: 1.4, speed: 'media', range: 5.5, targets: 'airground', size: 'M',
+  { id: 'jack', lvScreenshot: 10, name: 'Jack Espo', ispirata: 'Stregone', rarity: 'rare', cost: 5, count: 1,
+    hp: 756, dmg: 305, hitSpeed: 1.4, speed: 'media', range: 5.5, targets: 'airground', size: 'M',
     weapon: 'fire', proj: 'fireball', splash: 1.5 },
-  { id: 'corvo', name: 'Corvo', ispirata: 'Guardie', rarity: 'epic', cost: 3, count: 3,
-    hp: 67, shield: 212, dmg: 97, hitSpeed: 1.0, speed: 'rapida', range: MELEE.lunga, rangeLabel: 'Mischia: lunga',
+  { id: 'corvo', lvScreenshot: 9, name: 'Corvo', ispirata: 'Guardie', rarity: 'epic', cost: 3, count: 3,
+    hp: 81, shield: 257, dmg: 117, hitSpeed: 1.0, speed: 'rapida', range: MELEE.lunga, rangeLabel: 'Mischia: lunga',
     targets: 'ground', size: 'S', weapon: 'spearshield' },
-  { id: 'meme', name: 'Meme', ispirata: 'Goblin', rarity: 'common', cost: 2, count: 4,
-    hp: 167, dmg: 103, hitSpeed: 1.1, speed: 'molto_rapida', range: MELEE.corta, rangeLabel: 'Mischia: corta',
+  { id: 'meme', lvScreenshot: 9, name: 'Meme', ispirata: 'Goblin', rarity: 'common', cost: 2, count: 4,
+    hp: 202, dmg: 125, hitSpeed: 1.1, speed: 'molto_rapida', range: MELEE.corta, rangeLabel: 'Mischia: corta',
     targets: 'ground', size: 'S', weapon: 'dagger' },
-  { id: 'paoluccio', name: 'Paoluccio', ispirata: 'Stregone di ghiaccio', rarity: 'legendary', cost: 3, count: 1,
-    hp: 626, dmg: 81, spawnDmg: 76, hitSpeed: 1.7, speed: 'media', range: 5.5, targets: 'airground', size: 'M',
+  { id: 'paoluccio', lvScreenshot: 10, name: 'Paoluccio', ispirata: 'Stregone di ghiaccio', rarity: 'legendary', cost: 3, count: 1,
+    hp: 689, dmg: 89, spawnDmg: 84, hitSpeed: 1.7, speed: 'media', range: 5.5, targets: 'airground', size: 'M',
     weapon: 'ice', proj: 'iceball', splash: 1.5, slow: 2.5 },
-  { id: 'biondo', name: 'Biondo', ispirata: 'Spaccamuro', rarity: 'epic', cost: 2, count: 2,
-    hp: 300, dmg: 274, hitSpeed: 1, speed: 'molto_rapida', range: MELEE.corta, rangeLabel: 'Mischia: corta',
+  { id: 'biondo', lvScreenshot: 10, name: 'Biondo', ispirata: 'Spaccamuro', rarity: 'epic', cost: 2, count: 2,
+    hp: 330, dmg: 301, hitSpeed: 1, speed: 'molto_rapida', range: MELEE.corta, rangeLabel: 'Mischia: corta',
     targets: 'buildings', size: 'S', weapon: 'barrel', kamikaze: true, splash: 1.5 },
-  { id: 'lucab', name: 'LucaB', ispirata: 'Scintilla', rarity: 'legendary', cost: 6, count: 1,
-    hp: 1321, dmg: 1211, hitSpeed: 4, speed: 'lenta', range: 5, targets: 'ground', size: 'XL',
+  { id: 'lucab', lvScreenshot: 10, name: 'LucaB', ispirata: 'Scintilla', rarity: 'legendary', cost: 6, count: 1,
+    hp: 1453, dmg: 1332, hitSpeed: 4, speed: 'lenta', range: 5, targets: 'ground', size: 'XL',
     weapon: 'coil', machine: true, splash: 1.8, chargeUp: true },
-  { id: 'pesco', name: 'Pesco', ispirata: 'Barbari scelti', rarity: 'common', cost: 6, count: 2,
-    hp: 1220, dmg: 349, hitSpeed: 1.4, speed: 'rapida', range: MELEE.media, rangeLabel: 'Mischia: media',
+  { id: 'pesco', lvScreenshot: 10, name: 'Pesco', ispirata: 'Barbari scelti', rarity: 'common', cost: 6, count: 2,
+    hp: 1342, dmg: 384, hitSpeed: 1.4, speed: 'rapida', range: MELEE.media, rangeLabel: 'Mischia: media',
     targets: 'ground', size: 'M', weapon: 'twoswords' },
-  { id: 'blisco', name: 'Blisco', ispirata: 'Arcieri', rarity: 'common', cost: 3, count: 2,
-    hp: 277, dmg: 102, hitSpeed: 0.9, speed: 'media', range: 5, targets: 'airground', size: 'S',
+  { id: 'blisco', lvScreenshot: 10, name: 'Blisco', ispirata: 'Arcieri', rarity: 'common', cost: 3, count: 2,
+    hp: 305, dmg: 112, hitSpeed: 0.9, speed: 'media', range: 5, targets: 'airground', size: 'S',
     weapon: 'bow', proj: 'arrow' },
-  { id: 'kiuppi', name: 'Kiuppi', ispirata: 'Principe nero', rarity: 'epic', cost: 4, count: 1,
-    hp: 1092, shield: 219, dmg: 242, chargeDmg: 484, hitSpeed: 1.4, speed: 'media', range: MELEE.media,
+  { id: 'kiuppi', lvScreenshot: 10, name: 'Kiuppi', ispirata: 'Principe nero', rarity: 'epic', cost: 4, count: 1,
+    hp: 1201, shield: 241, dmg: 266, chargeDmg: 532, hitSpeed: 1.4, speed: 'media', range: MELEE.media,
     rangeLabel: 'Mischia: media', targets: 'ground', size: 'L', weapon: 'mace', mount: 'horse', charge: true, splashMelee: 1.1 },
-  { id: 'cimmi', name: 'Cimmi', ispirata: 'Gigante Royale', rarity: 'common', cost: 6, count: 1,
+  { id: 'cimmi', lvScreenshot: 11, name: 'Cimmi', ispirata: 'Gigante Royale', rarity: 'common', cost: 6, count: 1,
     hp: 3164, dmg: 307, hitSpeed: 1.8, speed: 'lenta', range: 5, targets: 'buildings', size: 'XL',
     weapon: 'cannon', proj: 'cannonball' }
 ];
@@ -626,50 +628,270 @@ class Sim {
 }
 
 // =====================================================================
-//  BOT per l'allenamento (ragiona nelle sue coordinate locali)
+//  COMPUTER (avversario per giocare da soli)
+//  Ragiona nelle sue coordinate locali (il suo re è in basso, y=3).
+//  - Difesa: valuta le minacce per corsia, sceglie la contro-carta
+//    adatta (aria, sciami, carri armati…) e la piazza nel punto giusto.
+//  - Attacco: spinte con carro armato + supporto, contro-spinte con le
+//    truppe sopravvissute, punizioni quando l'avversario ha poco elisir.
+//  - Non spreca elisir e usa l'abilità di Coto.
 // =====================================================================
+const BOT_LEVELS = {
+  facile:    { react: [2.0, 3.2], idle: [1.6, 2.8], mistake: 0.4, ignore: 0.3, pushAt: 10, support: false, ability: false, punish: false },
+  normale:   { react: [0.8, 1.4], idle: [0.8, 1.4], mistake: 0.12, ignore: 0.05, pushAt: 9,  support: true,  ability: true,  punish: true },
+  difficile: { react: [0.3, 0.6], idle: [0.45, 0.9], mistake: 0,   ignore: 0,    pushAt: 10,  support: true,  ability: true,  punish: true }
+};
+const rnd = (a, b) => a + Math.random() * (b - a);
+const cardDps = c => c.chargeUp ? c.dmg / c.hitSpeed : ((c.pellets ? c.dmg * c.pellets * 0.6 : c.dmg) / (c.hitSpeed || 1)) * c.count;
+const isSplash = c => !!(c.splash || c.splashMelee || c.pellets) && !c.kamikaze;
+const isBuilder = c => c.targets === 'buildings';
+const isRanged = c => c.range >= 3.5;
+const isAirDef = c => c.targets === 'airground';
+
+// mazzo del computer: casuale ma sensato (almeno una carta per attaccare le torri, difesa aerea e danno ad area)
+function botDeck() {
+  for (let k = 0; k < 300; k++) {
+    const d = randomDeck(), cs = d.map(id => CARDS[CARD_INDEX[id]]);
+    const builders = cs.filter(isBuilder).length, air = cs.filter(isAirDef).length, splash = cs.filter(isSplash).length;
+    const avg = cs.reduce((s, c) => s + c.cost, 0) / 8;
+    if (builders >= 1 && builders <= 2 && air >= 3 && splash >= 1 && avg <= 4.3) return d;
+  }
+  return DEFAULT_DECK.slice();
+}
+
 class Bot {
-  constructor(sim, team) { this.sim = sim; this.team = team; this.cd = 2.5 + Math.random() * 2; }
-  think(dt) {
-    const sim = this.sim, team = this.team, p = sim.players[team];
-    this.cd -= dt;
-    if (this.cd > 0 || sim.ended) return;
-    this.cd = 0.7 + Math.random() * 1.3;
-    const loc = u => L(team, u.x, u.y);
-    const champAlive = sim.units.some(u => u.alive && u.team === team && u.c.champion);
-    const afford = [0, 1, 2, 3].filter(i => {
+  constructor(sim, team, level = 'normale') {
+    this.sim = sim; this.team = team;
+    this.lv = BOT_LEVELS[level] || BOT_LEVELS.normale;
+    this.cd = rnd(2, 3.5);
+    this.reacting = false; this.reactT = 0;
+    this.stats = { defend: 0, push: 0, support: 0, punish: 0, leak: 0, ability: 0 };
+  }
+  loc(u) { return L(this.team, u.x, u.y); }
+  me() { return this.sim.players[this.team]; }
+  afford(filter) {
+    const p = this.me();
+    const champAlive = this.sim.units.some(u => u.alive && u.team === this.team && u.c.champion);
+    return [0, 1, 2, 3].filter(i => {
       const c = CARDS[p.hand[i]];
-      return c.cost <= p.ex && !(c.champion && champAlive);
+      return c.cost <= p.ex && !(c.champion && champAlive) && (!filter || filter(c));
     });
-    if (!afford.length) return;
-    const threats = sim.units.filter(u => u.alive && u.team !== team && loc(u)[1] < 17).sort((a, b) => loc(a)[1] - loc(b)[1]);
-    const tryPlay = (slot, lx, ly) => {
-      for (const [ox, oy] of [[0, 0], [1, 0], [-1, 0], [0, -1], [0, 1], [2, 0], [-2, 0], [0, -2]]) {
-        const [ax, ay] = L(team, lx + ox, ly + oy);
-        if (sim.play(team, slot, ax, ay).ok) return true;
+  }
+  // prova a giocare la carta vicino al punto (locale), cercando una casella valida
+  playAt(slot, lx, ly) {
+    lx = Math.max(0.5, Math.min(17.5, lx)); ly = Math.max(0.5, Math.min(14.5, ly));
+    const offs = [[0, 0], [1, 0], [-1, 0], [0, -1], [0, 1], [1, -1], [-1, -1], [2, 0], [-2, 0], [0, -2], [2, -2], [-2, -2]];
+    for (const [ox, oy] of offs) {
+      const [ax, ay] = L(this.team, lx + ox, ly + oy);
+      if (this.sim.play(this.team, slot, ax, ay).ok) return true;
+    }
+    return false;
+  }
+  // minacce per corsia: nemici nella mia metà o che stanno per attraversare
+  assess() {
+    const sim = this.sim, team = this.team;
+    const lanes = [0, 1].map(() => ({ threat: 0, def: 0, units: [], air: 0, ground: 0, swarm: 0, tank: 0, builder: 0, cost: 0, lead: null }));
+    for (const u of sim.units) {
+      if (!u.alive) continue;
+      const [lx, ly] = this.loc(u);
+      const ln = lanes[lx < 9 ? 0 : 1];
+      const val = u.c.cost / u.c.count * Math.max(0.2, u.hp / u.maxHp);
+      if (u.team !== team) {
+        if (ly > 18.5) continue;
+        const w = ly < 15 ? 1.3 : 1;
+        ln.threat += val * w; ln.cost += u.c.cost / u.c.count;
+        ln.units.push(u);
+        if (u.flying) ln.air += val; else ln.ground += val;
+        if (u.c.count >= 3) ln.swarm += val;
+        if (u.maxHp >= 1500) ln.tank += val;
+        if (isBuilder(u.c)) ln.builder += val;
+        if (!ln.lead || ly < ln.lead.ly) ln.lead = { u, lx, ly };
+      } else if (ly < 17 && !isBuilder(u.c)) {
+        ln.def += val;
       }
-      return false;
-    };
-    if (threats.length) {
-      const th = threats[0], [tx, ty] = loc(th);
-      let opts = afford.filter(i => CARDS[p.hand[i]].targets !== 'buildings');
-      if (th.flying) opts = opts.filter(i => CARDS[p.hand[i]].targets === 'airground');
-      if (!opts.length) return;
-      const slot = opts[Math.floor(Math.random() * opts.length)];
-      const ranged = CARDS[p.hand[slot]].range > 2;
-      tryPlay(slot, Math.max(1, Math.min(17, tx)), Math.max(1.5, Math.min(14.5, ty - (ranged ? 4 : 2))));
-      return;
     }
-    if (p.ex >= 9 || (Math.random() < 0.2 && p.ex >= 6)) {
-      const slot = afford[Math.floor(Math.random() * afford.length)];
-      const c = CARDS[p.hand[slot]];
-      const lane = Math.random() < 0.5 ? 3.5 : 14.5;
-      const front = c.targets === 'buildings' || SPEED[c.speed] >= 1.5;
-      tryPlay(slot, lane, front ? 14.5 : 10.5);
+    let best = null;
+    for (const ln of lanes) {
+      if (!ln.units.length) continue;
+      ln.need = ln.threat - ln.def * 1.1;
+      if (!best || ln.need > best.need) best = ln;
     }
+    if (best) {
+      let cx = 0, cy = 0;
+      for (const u of best.units) { const [lx, ly] = this.loc(u); cx += lx; cy += ly; }
+      best.cx = cx / best.units.length; best.cy = cy / best.units.length;
+      best.airOnly = best.air > 0 && best.ground < 0.5;
+    }
+    return best;
+  }
+  scoreDefense(c, th) {
+    let s = 0;
+    if (th.air > 0 && !isAirDef(c)) s -= th.airOnly ? 100 : 3;
+    if (isBuilder(c)) s -= 10;
+    if (c.kamikaze) s -= 10;
+    if (th.swarm > 0 && isSplash(c)) s += 4;
+    if (th.swarm > 0 && c.count === 1 && !isSplash(c) && c.hitSpeed > 1.2) s -= 2;
+    if (th.tank > 0 && cardDps(c) >= 250) s += 3;
+    if (th.tank > 0 && c.count >= 3 && !c.flying) s += 2;
+    if (th.builder > 0 && th.swarm === 0) s += c.count >= 2 ? 1.5 : 0;
+    if (isRanged(c)) s += 1;
+    s -= Math.max(0, c.cost - (th.cost + 0.5)) * 1.2;
+    s += Math.random();
+    return s;
+  }
+  defend(th) {
+    const p = this.me();
+    const opts = this.afford();
+    if (!opts.length) return false;
+    let slot;
+    if (Math.random() < this.lv.mistake) slot = opts[Math.floor(Math.random() * opts.length)];
+    else {
+      let bs = -Infinity;
+      for (const i of opts) { const sc = this.scoreDefense(CARDS[p.hand[i]], th); if (sc > bs) { bs = sc; slot = i; } }
+      if (bs < -5) return false;
+    }
+    const c = CARDS[p.hand[slot]];
+    const lead = th.lead;
+    let px = lead.lx, py;
+    if (th.swarm > 0 && isSplash(c)) { px = th.cx; py = th.cy - (isRanged(c) ? c.range * 0.75 : 1.5); }
+    else if (isRanged(c)) py = Math.min(lead.ly - c.range * 0.7, 9);
+    else if (c.flying) py = lead.ly - 1;
+    else py = lead.ly - 2;
+    // il carro armato nemico va "trascinato" verso il centro, lontano dalle torri
+    if (th.builder > 0 && !isRanged(c) && lead.ly > 9) px = lead.lx < 9 ? Math.min(lead.lx + 2.5, 8) : Math.max(lead.lx - 2.5, 10);
+    if (this.lv.mistake > 0.2) { px += rnd(-2, 2); py += rnd(-2, 2); }
+    if (this.playAt(slot, px, Math.max(2, py))) { this.stats.defend++; return true; }
+    return false;
+  }
+  laneToAttack() {
+    const enemy = this.sim.towers.filter(t => t.team !== this.team && t.kind === 'princess');
+    const byLane = [0, 1].map(lane => enemy.find(t => (L(this.team, t.x, t.y)[0] < 9) === (lane === 0)));
+    const alive = byLane.map(t => t && t.alive);
+    if (alive[0] && !alive[1]) return Math.random() < 0.7 ? 1 : 0;   // torre già caduta: punta al re da lì
+    if (!alive[0] && alive[1]) return Math.random() < 0.7 ? 0 : 1;
+    if (alive[0] && alive[1]) {
+      const h0 = byLane[0].hp, h1 = byLane[1].hp;
+      if (Math.abs(h0 - h1) > 300) return h0 < h1 ? (Math.random() < 0.75 ? 0 : 1) : (Math.random() < 0.75 ? 1 : 0);
+    }
+    return Math.random() < 0.5 ? 0 : 1;
+  }
+  myPush() {
+    // la mia truppa più avanzata per corsia (truppe sopravvissute = contro-spinta)
+    const res = [null, null];
+    for (const u of this.sim.units) {
+      if (!u.alive || u.team !== this.team || u.deploy > 0) continue;
+      const [lx, ly] = this.loc(u);
+      if (ly < 8) continue;
+      const lane = lx < 9 ? 0 : 1;
+      const val = u.c.cost / u.c.count * (u.hp / u.maxHp);
+      if (!res[lane]) res[lane] = { value: 0, lead: null };
+      res[lane].value += val;
+      if (!res[lane].lead || ly > res[lane].lead.ly) res[lane].lead = { u, lx, ly };
+    }
+    return res;
+  }
+  attack() {
+    const sim = this.sim, p = this.me();
+    const mult = elixirMult(sim.t * 1000);
+    const pushAt = this.lv.pushAt - (mult > 1 ? 2 : 0);
+    const opEx = sim.players[1 - this.team].ex;
+    const pushes = this.myPush();
+    // 1) supporta una spinta già in corso (contro-spinta)
+    if (this.lv.support) {
+      const lane = pushes[0] && (!pushes[1] || pushes[0].value >= pushes[1].value) ? 0 : (pushes[1] ? 1 : -1);
+      this.lastSupport = this.lastSupport || [-99, -99];
+      if (lane >= 0 && pushes[lane].value >= 3 && pushes[lane].lead.ly >= 11 && sim.t - this.lastSupport[lane] > 5 && p.ex >= 5) {
+        const lead = pushes[lane].lead;
+        const opts = this.afford(c => !isBuilder(c) || lead.u.c.targets !== 'buildings');
+        if (opts.length) {
+          // dietro a un carro armato metti chi fa danno ad area o colpisce a distanza
+          let slot = opts[0], bs = -Infinity;
+          for (const i of opts) {
+            const c = CARDS[p.hand[i]];
+            let s = (isRanged(c) ? 2 : 0) + (isSplash(c) ? 2 : 0) + (lead.u.maxHp >= 1500 && !isBuilder(c) ? 1 : 0) - c.cost * 0.3 + Math.random();
+            if (s > bs) { bs = s; slot = i; }
+          }
+          const c = CARDS[p.hand[slot]];
+          if (p.ex - c.cost >= 2 || p.ex >= 9) {
+            const y = lead.ly < 14.5 ? lead.ly - 2.5 : 14.5;
+            if (this.playAt(slot, lead.lx, y)) { this.stats.support++; this.lastSupport[lane] = sim.t; return; }
+          }
+        }
+      }
+    }
+    // 2) punisci quando l'avversario è a corto di elisir
+    if (this.lv.punish && opEx < 3 && p.ex >= 4) {
+      const opts = this.afford(c => isBuilder(c) && SPEED[c.speed] >= 1.5);
+      if (opts.length) {
+        const laneX = this.laneToAttack() === 0 ? 3.5 : 14.5;
+        if (this.playAt(opts[0], laneX, 14.5)) { this.stats.punish++; return; }
+      }
+    }
+    // 3) nuova spinta quando ho abbastanza elisir
+    if (p.ex >= pushAt) {
+      const laneX = this.laneToAttack() === 0 ? 3.5 : 14.5;
+      const tanks = this.afford(c => isBuilder(c));
+      let slot = -1, y = 11;
+      if (tanks.length) {
+        slot = tanks[0];
+        const c = CARDS[p.hand[slot]];
+        y = SPEED[c.speed] >= 1.5 || c.range > 3 ? 14.5 : 11;   // veloci o a distanza al ponte, lenti dalle retrovie
+      } else {
+        const opts = this.afford();
+        if (opts.length) {
+          // la carta più "robusta" da far avanzare
+          slot = opts.reduce((a, b) => (CARDS[p.hand[b]].hp * CARDS[p.hand[b]].count > CARDS[p.hand[a]].hp * CARDS[p.hand[a]].count ? b : a));
+          y = isRanged(CARDS[p.hand[slot]]) ? 9 : 12;
+        }
+      }
+      if (slot >= 0 && this.playAt(slot, laneX + rnd(-0.5, 0.5), y)) { this.stats.push++; return; }
+    }
+    // 4) elisir pieno: non sprecarlo, gioca una carta economica dietro
+    if (p.ex >= 9.6) {
+      const opts = this.afford();
+      if (opts.length) {
+        const slot = opts.reduce((a, b) => CARDS[p.hand[b]].cost < CARDS[p.hand[a]].cost ? b : a);
+        if (this.playAt(slot, Math.random() < 0.5 ? 6.5 : 11.5, 4.5)) this.stats.leak++;
+      }
+    }
+  }
+  useAbility() {
+    if (!this.lv.ability) return;
+    const sim = this.sim, p = this.me();
+    const champ = sim.units.find(u => u.alive && u.team === this.team && u.c.champion && u.deploy <= 0);
+    if (!champ || p.abilityCd > 0 || p.ex < 1) return;
+    let n = 0, big = false;
+    for (const v of sim.units) {
+      if (!v.alive || v.team === this.team) continue;
+      if (Math.hypot(v.x - champ.x, v.y - champ.y) - v.r <= champ.c.ability.range) { n++; if (v.hp > 600) big = true; }
+    }
+    if (n >= 2 || (n === 1 && big)) { if (sim.ability(this.team).ok) this.stats.ability++; }
+  }
+  think(dt) {
+    if (this.sim.ended) return;
+    this.cd -= dt;
+    this.useAbility();
+    const th = this.assess();
+    const urgent = th && th.lead && th.lead.ly < 10;
+    if (th && (th.need > 1.4 || (urgent && th.need > 0.3))) {
+      if (!this.reacting) { this.reacting = true; this.reactT = rnd(...this.lv.react) + (Math.random() < this.lv.ignore ? 3 : 0); }
+    } else this.reacting = false;
+    if (this.reacting) {
+      this.reactT -= dt;
+      if (this.reactT <= 0) {
+        this.reacting = false;
+        const fresh = this.assess();
+        if (fresh && fresh.need > 0.3 && this.defend(fresh)) { this.cd = Math.max(this.cd, 0.4); return; }
+      }
+      // mentre una minaccia è in arrivo non lancia attacchi (tranne a elisir pieno)
+      if (this.me().ex < 9.6) return;
+    }
+    if (this.cd > 0) return;
+    this.cd = rnd(...this.lv.idle);
+    this.attack();
   }
 }
 
 return { CFG, CARDS, CARD_INDEX, TOWERS, TOWER_STATS, SIZE, SPEED, SPEED_LABEL, TARGET_LABEL, PROJ_SPEED,
-  FORMATION, DEFAULT_DECK, Sim, Bot, L, placeOk, validDeck, randomDeck, elixirMult };
+  FORMATION, DEFAULT_DECK, Sim, Bot, BOT_LEVELS, L, placeOk, validDeck, randomDeck, botDeck, elixirMult };
 });
